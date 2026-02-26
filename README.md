@@ -1,89 +1,121 @@
-Campus Event & RSVP Tracker
-<p align="center"> <img src="https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB" /> <img src="https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=nodedotjs&logoColor=white" /> <img src="https://img.shields.io/badge/Express-000000?style=for-the-badge&logo=express&logoColor=white" /> <img src="https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge" /> </p> 
+# Campus Event & RSVP Tracker
 
-🏫 Overview
+<p align="center">
+  <img src="https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB" />
+  <img src="https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=nodedotjs&logoColor=white" />
+  <img src="https://img.shields.io/badge/Express-000000?style=for-the-badge&logo=express&logoColor=white" />
+  <img src="https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge" />
+</p>
 
-Campus Event & RSVP Tracker is a centralized web-based platform designed for university campuses to manage events, enforce real-time RSVP capacity limits, and digitally validate attendance using secure QR-based check-in.
-Built as a scalable team project with structured authentication, role-based access control (RBAC), and analytics-driven administration.
+---
 
-✨ Features
+## 🏫 Overview
 
-•	🔎 Event discovery with filtering (date, category, organizer)
+**Campus Event & RSVP Tracker** is a centralized, web-based platform for managing university events, enforcing RSVP capacity limits in real time, and validating attendance digitally with secure, QR-based check-in.<br>
+Built to scale for teams and institutions, it features robust authentication, role-based access control (RBAC), and insightful analytics for administrators.
 
-•	🎫 Smart RSVP with automatic seat limit enforcement
+---
 
-•	📱 Unique QR code generation & secure check-in validation
+## ✨ Features
 
-•	🔄 Event lifecycle management (Draft → Published → Ongoing → Completed → Cancelled)
+- **🔎 Event Discovery** — Find events with filters for date, category, and organizer.
+- **🎫 Smart RSVP** — Real-time seat limit enforcement for stress-free planning.
+- **📱 QR Code Check-in** — Unique QR code generation for each RSVP and fast, secure attendance validation.
+- **🔄 Event Lifecycle Management** — Easily move events between Draft 🚧, Published 📢, Ongoing 💡, Completed ✅, and Cancelled ❌ states.
+- **📊 Analytics Dashboard** — Admin access to RSVP stats and attendance analytics.
+- **🔐 Security** — JWT authentication & role-based access controls for granular permissions.
 
-•	📊 Admin dashboard with RSVP & attendance analytics
+---
 
-•	🔐 Security: JWT authentication + Role-Based Access Control
+## 🛠 Tech Stack
 
+#### **Frontend**
+- [React.js](https://react.dev/)
+- [React Router](https://reactrouter.com/)
+- [Tailwind CSS](https://tailwindcss.com/)
 
-🛠 Tech Stack
+#### **Backend**
+- [Node.js](https://nodejs.org/)
+- [Express.js](https://expressjs.com/) (REST API)
 
-Frontend
+#### **Database**
+- [Firebase Firestore](https://firebase.google.com/docs/firestore) / [MongoDB](https://www.mongodb.com/)
 
-•	React.js
-•	React Router
-•	Tailwind CSS
+#### **Authentication**
+- JWT / Firebase Auth
 
-Backend
+---
 
-•	Node.js
-•	Express.js (REST API)
+## ⚙️ Setup & Installation
 
-Database
-
-•	Firebase Firestore / MongoDB
-Authentication
-
-•	JWT / Firebase Auth
-
-⚙️ Setup
-
-# Clone repository
+```bash
+# 1. Clone the repository
 git clone https://github.com/Henok-SE/Campus-Event-RSVP-Tracker.git
 cd Campus-Event-RSVP-Tracker
 
-# Install frontend
-cd client && npm install
+# 2. Install frontend dependencies
+cd client
+npm install
 
-# Install backend
-cd ../server && npm install
+# 3. Install backend dependencies
+cd ../server
+npm install
 
-# Run backend
-cd server && npm run dev
+# 4. Run backend server
+npm run dev
 
-# Run frontend
-cd client && npm start
-Frontend: http://localhost:3000
-Backend API: http://localhost:5000/api
+# 5. Run frontend
+cd ../client
+npm start
+```
 
-📄 Project Charter
+- Frontend: [http://localhost:3000](http://localhost:3000)
+- Backend API: [http://localhost:5000/api](http://localhost:5000/api)
 
-The official scope, objectives, stakeholder roles, timeline, and risk analysis are documented in the Project Charter.
-📌 View Charter:
-[Insert Project Charter Link Here]
+---
 
-🤝 Contributing
+## 📄 Project Charter
 
-1.	Fork the repository
-2.	Create branch
-git checkout -b feature/your-feature-name
-3.	Commit changes
-git commit -m "Add feature"
-4.	Push
-git push origin feature/your-feature-name
-5.	Open Pull Request
-Best practice:
-•	One feature per branch
-•	Use pull requests for merging
-•	Keep commits descriptive
+For full details on the project's scope, objectives, stakeholders, timeline, and risk analysis, see the Project Charter.
 
-📜 License
-MIT License — see LICENSE file.
+**📌 [View the Project Charter →](#)** <!-- Replace "#" with actual link when available -->
 
-🙌 Acknowledgments
+---
+
+## 🤝 Contributing
+
+We love contributions! To get started:
+
+1. **Fork** this repository
+2. **Create a new branch**
+   ```bash
+   git checkout -b feature/your-feature-name
+   ```
+3. **Commit your changes**
+   ```bash
+   git commit -m "Add feature"
+   ```
+4. **Push to your branch**
+   ```bash
+   git push origin feature/your-feature-name
+   ```
+5. **Open a Pull Request** to the `main` branch
+
+**Guidelines**:
+- One feature or fix per branch
+- Use descriptive commit messages
+- All merges via Pull Request
+
+---
+
+## 📜 License
+
+This project is licensed under the [MIT License](LICENSE).
+
+---
+
+## 🙌 Acknowledgments
+
 Developed by the PCIC student team, Hawassa University.
+
+---
