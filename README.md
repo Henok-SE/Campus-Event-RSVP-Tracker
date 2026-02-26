@@ -78,7 +78,7 @@ npm start
 
 For full details on the project's scope, objectives, stakeholders, timeline, and risk analysis, see the Project Charter.
 
-**📌 [View the Project Charter →](#)** <!-- Replace "#" with actual link when available -->
+**📌 [View the Project Charter →](https://docs.google.com/document/d/1V2aqEorsikDaCRW1CAQ3osSluMpUpIewOEMrVOVfXCA/edit?usp=sharing)** <!-- Replace "#" with actual link when available -->
 
 ---
 
