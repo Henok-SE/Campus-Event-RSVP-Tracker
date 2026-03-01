@@ -1,0 +1,12 @@
+{
+  "name": "campus-event-rsvp-tracker",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "dev:frontend": "npm --prefix frontend run dev",
+    "dev:backend": "npm --prefix backend run dev",
+    "build:frontend": "npm --prefix frontend run build",
+    "lint:frontend": "npm --prefix frontend run lint",
+    "install:all": "npm --prefix frontend install && npm --prefix backend install"
+  }
+}
