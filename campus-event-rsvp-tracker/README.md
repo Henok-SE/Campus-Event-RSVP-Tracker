@@ -39,7 +39,7 @@ Built to scale for teams and institutions, it features robust authentication, ro
 - [Express.js](https://expressjs.com/) (REST API)
 
 #### **Database**
-- [Firebase Firestore](https://firebase.google.com/docs/firestore) / [MongoDB](https://www.mongodb.com/)
+- [MongoDB](https://www.mongodb.com/)
 
 #### **Authentication**
 - JWT / Firebase Auth
