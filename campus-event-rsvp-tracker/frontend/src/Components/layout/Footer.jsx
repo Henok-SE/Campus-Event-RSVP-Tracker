@@ -14,7 +14,7 @@ const Footer = () => {
           </div>
 
           <div>
-            <h4 className="font-semibold text-gray-900 mb-4">Platform</h4>
+            <h4 className="font-semibold text-blue-900 mb-4">Platform</h4>
             <ul className="space-y-2">
               <li><Link to="/events" className="text-gray-600 hover:text-blue-600">Browse Events</Link></li>
               <li><Link to="/host" className="text-gray-600 hover:text-blue-600">Host an Event</Link></li>
@@ -24,7 +24,7 @@ const Footer = () => {
           </div>
 
           <div>
-            <h4 className="font-semibold text-gray-900 mb-4">Company</h4>
+            <h4 className="font-semibold text-blue-900 mb-4">Company</h4>
             <ul className="space-y-2">
               <li><Link to="/about" className="text-gray-600 hover:text-blue-600">About Us</Link></li>
               <li><Link to="/blog" className="text-gray-600 hover:text-blue-600">Blog</Link></li>
@@ -34,7 +34,7 @@ const Footer = () => {
           </div>
 
           <div>
-            <h4 className="font-semibold text-gray-900 mb-4">Legal</h4>
+            <h4 className="font-semibold text-blue-900 mb-4">Legal</h4>
             <ul className="space-y-2">
               <li><Link to="/privacy" className="text-gray-600 hover:text-blue-600">Privacy Policy</Link></li>
               <li><Link to="/terms" className="text-gray-600 hover:text-blue-600">Terms of Service</Link></li>
