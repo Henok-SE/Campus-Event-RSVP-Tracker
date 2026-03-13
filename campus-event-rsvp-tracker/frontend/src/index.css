@@ -1,9 +1,24 @@
 @import "tailwindcss";
 
 :root {
-  font-family: "Sora", "Segoe UI", sans-serif;
+  font-family: "Inter", system-ui, -apple-system, sans-serif;
 }
 
 body {
   margin: 0;
+  background-color: #ffffff;
+  color: #111827;
+}
+
+/* Custom blue colors */
+.bg-blue-primary {
+  background-color: #2563eb;
+}
+
+.text-blue-primary {
+  color: #2563eb;
+}
+
+.border-blue-primary {
+  border-color: #2563eb;
 }
