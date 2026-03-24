@@ -1,0 +1,139 @@
+// src/pages/Landing.jsx
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import { useEffect } from 'react';
+import EventCard from '../components/ui/EventCard';
+
+const upcoming = [
+  { id:1, title:"Spring Hackathon '26", date:"Mar 22-23", location:"Engineering Hall", tag:"Tech", image:"https://picsum.photos/id/1015/600/340" },
+  { id:2, title:"Sunset Music Fest", date:"Apr 5", location:"Campus Green", tag:"Music", image:"https://picsum.photos/id/201/600/340" },
+  { id:3, title:"Student Art Exhibition", date:"Apr 12-18", location:"Gallery West", tag:"Art", image:"https://picsum.photos/id/301/600/340" },
+];
+
+export default function Landing() {
+  const { isLoggedIn } = useAuth();
+  const navigate = useNavigate();
+
+  // If already signed up → go straight to Dashboard
+  useEffect(() => {
+    if (isLoggedIn) navigate('/dashboard', { replace: true });
+  }, [isLoggedIn, navigate]);
+
+  return (
+    <>
+      {/* HERO - id="home" */}
+      <section id="home" className="relative h-screen flex items-center justify-center overflow-hidden bg-cover bg-center"
+        style={{ backgroundImage: "url('https://picsum.photos/id/1016/2000/1200')" }}>
+        
+        <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/50 to-black/70" />
+
+        <div className="relative z-10 text-center px-6 max-w-5xl mx-auto">
+          <div className="inline-flex items-center gap-2 bg-white/90 backdrop-blur-md text-slate-800 px-6 py-2 rounded-full text-sm font-medium mb-8">
+            🌟 Spring 2026 events are live
+          </div>
+
+          <h1 className="text-7xl font-bold text-white leading-none mb-6 tracking-tight">
+            Discover Campus Events<br />Easily
+          </h1>
+          
+          <p className="text-2xl text-white/90 max-w-3xl mx-auto mb-12">
+            Find, join, and create unforgettable campus events — from hackathons to open mics, all in one place.
+          </p>
+
+          <div className="flex flex-col sm:flex-row gap-5 justify-center">
+            <Link 
+              to="/login" 
+              className="bg-blue-600 hover:bg-blue-700 text-white px-12 py-5 rounded-2xl font-semibold text-lg transition-all"
+            >
+             Explore Events →
+            </Link>
+            <Link 
+              to="/login" 
+              className="border-2 border-white text-white hover:bg-white/10 px-12 py-5 rounded-2xl font-semibold text-lg transition-all"
+            >
+              Host an Event
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* WHAT IS CAMPUSVIBE - id="about" */}
+      <section id="about" className="py-24 px-6 bg-white">
+        <div className="max-w-7xl mx-auto grid md:grid-cols-2 gap-16 items-center">
+          <div>
+            <p className="uppercase text-blue-600 font-semibold tracking-widest text-sm mb-3">WHAT IS CAMPUSVIBE?</p>
+            <h2 className="text-5xl font-bold leading-tight mb-8">The heartbeat of your campus</h2>
+            <p className="text-lg text-slate-600">CampusVibe is a student-powered platform that brings every campus event into one beautiful feed.</p>
+          </div>
+
+          <div className="space-y-6">
+            {[
+              { icon: "⚡", title: "Instant Discovery", desc: "Events are auto-tagged and sorted so you never miss what matters to you." },
+              { icon: "❤️", title: "Community First", desc: "See who’s going, invite your crew, and build real connections." },
+              { icon: "🌍", title: "Open to Every Campus", desc: "Whether your school has 500 or 50,000 students, it fits perfectly." }
+            ].map((item, i) => (
+              <div key={i} className="flex gap-6 bg-slate-50 p-8 rounded-3xl">
+                <div className="text-5xl">{item.icon}</div>
+                <div>
+                  <h3 className="font-semibold text-2xl mb-2">{item.title}</h3>
+                  <p className="text-slate-600">{item.desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* HOW IT WORKS + UPCOMING EVENTS - id="events" */}
+      <section id="events" className="bg-slate-50 py-24 px-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-16">
+            <p className="uppercase text-blue-600 text-sm font-medium tracking-widest mb-3">SIMPLE &amp; EASY</p>
+            <h2 className="text-5xl font-bold">How it works</h2>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-10 mb-20">
+            {[
+              { n: "01", t: "Browse", d: "Explore events by category, date, or popularity" },
+              { n: "02", t: "RSVP", d: "One tap to save your spot and invite friends" },
+              { n: "03", t: "Show Up & Enjoy", d: "Arrive, connect, and make memories" }
+            ].map(step => (
+              <div key={step.n} className="text-center">
+                <div className="w-20 h-20 mx-auto bg-blue-600 text-white text-4xl font-bold rounded-3xl flex items-center justify-center mb-6">
+                  {step.n}
+                </div>
+                <h3 className="text-3xl font-semibold mb-3">{step.t}</h3>
+                <p className="text-slate-600">{step.d}</p>
+              </div>
+            ))}
+          </div>
+
+          <div>
+            <div className="flex justify-between items-end mb-10">
+              <h2 className="text-4xl font-bold">Don’t miss out</h2>
+              <Link to="/login" className="text-blue-600 font-medium">View all events →</Link>
+            </div>
+            <div className="grid md:grid-cols-3 gap-8">
+              {upcoming.map(event => <EventCard key={event.id} event={event} />)}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* FINAL CTA */}
+      <div className="bg-blue-600 py-20 text-white text-center rounded-3xl mx-6">
+        <div className="max-w-2xl mx-auto px-6">
+          <h2 className="text-5xl font-bold mb-6">Ready to vibe with your campus?</h2>
+          <p className="text-2xl opacity-90 mb-10">Join thousands of students already discovering unforgettable moments.</p>
+          
+          <Link 
+            to="/login" 
+            className="inline-block bg-white text-blue-600 px-16 py-5 rounded-xl font-semibold text-xl hover:bg-slate-100 transition-all shadow-lg"
+          >
+            Get Started Free →
+          </Link>
+        </div>
+      </div>
+    </>
+  );
+}
