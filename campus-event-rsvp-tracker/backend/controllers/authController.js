@@ -62,12 +62,13 @@ exports.login = async (req, res) => {
       "secretkey",
       { expiresIn: "1d" }
     );
-    console.log("🔥 LOGIN CONTROLLER REACHED");
+    return res.status(200).json({message: "login successful",token:token});
 
-    return res.json({ message: "Login successful", token });
+    //return res.json({ message: "Login successful", token });
+
 
   } catch (error) {
-    console.log(error);
-    return res.status(500).json({ message: "Server error" });
+    console.log("real error: ",error);
+    return res.status(500).json({ message: error.message});
   }
 };
