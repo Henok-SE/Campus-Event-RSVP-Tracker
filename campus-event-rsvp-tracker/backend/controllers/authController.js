@@ -41,6 +41,16 @@ exports.register = async (req, res) => {
     });
 
   } catch (error) {
+    if (error && error.code === 11000) {
+      const fieldFromPattern = error.keyPattern ? Object.keys(error.keyPattern)[0] : undefined;
+      const fieldFromValue = !fieldFromPattern && error.keyValue ? Object.keys(error.keyValue)[0] : undefined;
+      const field = fieldFromPattern || fieldFromValue || "field";
+
+      return res.status(409).json({
+        message: `A user with this ${field} already exists`,
+        field
+      });
+    }
     return res.status(500).json({ message: "Failed to register user" });
   }
 };
