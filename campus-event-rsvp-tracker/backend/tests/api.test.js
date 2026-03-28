@@ -38,6 +38,7 @@ describe("Backend API smoke tests", () => {
     jest.clearAllMocks();
   });
 
+  afterEach(jest.restoreAllMocks);
   test("GET /api/health returns ok", async () => {
     const res = await request(app).get("/api/health");
 
