@@ -8,6 +8,10 @@ exports.register = async (req, res) => {
   try {
     const { name, email, student_id, password } = req.body;
 
+    if (!name || !email || !student_id || !password) {
+      return res.status(400).json({ message: "name, email, student_id, and password are required" });
+    }
+
     const userExists = await User.findOne({ email });
 
     if (userExists) {
@@ -25,25 +29,31 @@ exports.register = async (req, res) => {
 
     await user.save();
 
-    res.json({ message: "User registered successfully" });
+    return res.status(201).json({
+      message: "User registered successfully",
+      data: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        student_id: user.student_id,
+        role: user.role
+      }
+    });
 
   } catch (error) {
-    console.log(error);
-    res.status(500).json(error);
+    return res.status(500).json({ message: "Failed to register user" });
   }
 };
 
-//exports.login = async (req, res) => {
-  //res.send("Login route working");};
 exports.login = async (req, res) => {
   try {
-    console.log("LOGIN REQUEST BODY:", req.body);
-
     const { email, password } = req.body;
 
-    const user = await User.findOne({ email });
+    if (!email || !password) {
+      return res.status(400).json({ message: "email and password are required" });
+    }
 
-    console.log("USER FOUND:", user);
+    const user = await User.findOne({ email });
 
     if (!user) {
       return res.status(400).json({ message: "User not found" });
@@ -51,24 +61,35 @@ exports.login = async (req, res) => {
 
     const isMatch = await bcrypt.compare(password, user.password);
 
-    console.log("PASSWORD MATCH:", isMatch);
-
-    if (isMatch !== true) {
+    if (!isMatch) {
       return res.status(400).json({ message: "Invalid password" });
+    }
+
+    if (!process.env.JWT_SECRET) {
+      return res.status(500).json({ message: "JWT_SECRET is not configured" });
     }
 
     const token = jwt.sign(
       { id: user._id },
-      "secretkey",
+      process.env.JWT_SECRET,
       { expiresIn: "1d" }
     );
-    return res.status(200).json({message: "login successful",token:token});
 
-    //return res.json({ message: "Login successful", token });
-
+    return res.status(200).json({
+      message: "Login successful",
+      data: {
+        token,
+        user: {
+          id: user._id,
+          name: user.name,
+          email: user.email,
+          student_id: user.student_id,
+          role: user.role
+        }
+      }
+    });
 
   } catch (error) {
-    console.log("real error: ",error);
-    return res.status(500).json({ message: error.message});
+    return res.status(500).json({ message: "Failed to login" });
   }
 };

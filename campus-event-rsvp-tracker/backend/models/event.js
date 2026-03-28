@@ -15,6 +15,7 @@ event_date:Date,
 
 status:{
 type:String,
+enum:["Draft", "Published", "Ongoing", "Completed", "Cancelled"],
 default:"Draft"
 },
 
@@ -30,4 +31,6 @@ default:Date.now
 
 });
 
-module.exports = mongoose.model("event", eventSchema);
+eventSchema.index({ created_by: 1, event_date: 1 });
+
+module.exports = mongoose.model("Event", eventSchema);

@@ -26,4 +26,6 @@ default:"Confirmed"
 
 });
 
-module.exports = mongoose.model("rsvp", rsvpSchema);
+rsvpSchema.index({ user_id: 1, event_id: 1 }, { unique: true });
+
+module.exports = mongoose.model("RSVP", rsvpSchema);

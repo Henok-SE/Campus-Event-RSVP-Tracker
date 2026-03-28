@@ -21,4 +21,6 @@ validation_method:String
 
 });
 
-module.exports = mongoose.model("attendance", attendanceSchema);
+attendanceSchema.index({ event_id: 1, user_id: 1 }, { unique: true });
+
+module.exports = mongoose.model("Attendance", attendanceSchema);

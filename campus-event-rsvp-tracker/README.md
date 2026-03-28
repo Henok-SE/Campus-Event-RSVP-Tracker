@@ -1,115 +1,240 @@
-# Campus Event & RSVP Tracker
+# Campus Event and RSVP Tracker
 
-<p align="center">
-  <img src="https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB" />
-  <img src="https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=nodedotjs&logoColor=white" />
-  <img src="https://img.shields.io/badge/Express-000000?style=for-the-badge&logo=express&logoColor=white" />
-  <img src="https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge" />
-</p>
+## Project Overview
+Campus Event and RSVP Tracker is a web application for university event management. It supports event publishing, student RSVP workflows, and attendance tracking with a backend designed for team-based development.
 
----
+This README is written for a 5-person team and should be treated as the shared implementation contract for setup, branching, pull requests, and release readiness.
 
-## 🏫 Overview
+## Team Structure (5 Members)
+Use clear ownership so parallel work does not conflict.
 
-**Campus Event & RSVP Tracker** is a centralized, web-based platform for managing university events, enforcing RSVP capacity limits in real time, and validating attendance digitally with secure, QR-based check-in.<br>
-Built to scale for teams and institutions, it features robust authentication, role-based access control (RBAC), and insightful analytics for administrators.
+1. Frontend Lead
+   Owns React pages, routing, UI components, and frontend integration.
+2. Backend Lead
+   Owns API contracts, controllers, route structure, middleware, and validation.
+3. Database and Data Flow Lead
+   Owns schema changes, indexes, seeding, and migration-safe data updates.
+4. QA and Test Lead
+   Owns test scenarios, API smoke tests, regression checks, and release verification.
+5. DevOps and Documentation Lead
+   Owns environment consistency, scripts, developer onboarding, and docs quality.
 
----
+If a task touches two domains, assign a primary owner and a reviewer before coding.
 
-## ✨ Features
+## Current Stack
+Frontend
+1. React 19
+2. React Router 7
+3. Vite
 
-- **🔎 Event Discovery** — Find events with filters for date, category, and organizer.
-- **🎫 Smart RSVP** — Real-time seat limit enforcement for stress-free planning.
-- **📱 QR Code Check-in** — Unique QR code generation for each RSVP and fast, secure attendance validation.
-- **🔄 Event Lifecycle Management** — Easily move events between Draft 🚧, Published 📢, Ongoing 💡, Completed ✅, and Cancelled ❌ states.
-- **📊 Analytics Dashboard** — Admin access to RSVP stats and attendance analytics.
-- **🔐 Security** — JWT authentication & role-based access controls for granular permissions.
+Backend
+1. Node.js
+2. Express
+3. Mongoose
+4. JWT Authentication
 
----
+Database
+1. MongoDB (local development default)
 
-## 🛠 Tech Stack
+## Repository Layout
+```text
+campus-event-rsvp-tracker/
+|- frontend/
+|- backend/
+|  |- controllers/
+|  |- middlewares/
+|  |- models/
+|  |- routes/
+|  |- scripts/         # db seed/init scripts
+|  |- tests/
+|- README.md
+```
 
-#### **Frontend**
-- [React.js](https://react.dev/)
-- [React Router](https://reactrouter.com/)
-- [Tailwind CSS](https://tailwindcss.com/)
+## Branching Strategy for Team Work
+Use short-lived feature branches and keep main stable.
 
-#### **Backend**
-- [Node.js](https://nodejs.org/)
-- [Express.js](https://expressjs.com/) (REST API)
+1. Base branch
+   `main` is always deployable.
+2. Branch naming
+   `feature/<scope>-<short-name>`
+   `fix/<scope>-<short-name>`
+   `chore/<scope>-<short-name>`
+3. Examples
+   `feature/backend-rsvp-endpoint`
+   `feature/frontend-events-page`
+   `fix/backend-auth-validation`
 
-#### **Database**
-- [MongoDB](https://www.mongodb.com/)
+## Commit Message Standard
+Use a lightweight conventional format:
+`type(scope): summary`
 
-#### **Authentication**
-- JWT / Firebase Auth
+1. Types
+   `feat`, `fix`, `refactor`, `test`, `docs`, `chore`
+2. Examples
+   `feat(backend): add event details endpoint`
+   `fix(auth): reject invalid token format`
+   `docs(readme): add team collaboration guide`
 
----
+## Pull Request Standard (Mandatory)
+Every PR should include:
 
-## ⚙️ Setup & Installation
+1. What changed
+2. Why it changed
+3. How it was tested
+4. Risk and rollback notes
+5. Screenshots or sample API responses if relevant
+
+Minimum review policy:
+1. At least 1 reviewer for regular changes
+2. At least 2 reviewers for schema/API contract changes
+3. Do not self-merge without at least one approved review
+
+## Local Setup
+### Prerequisites
+1. Node.js 18+
+2. npm 9+
+3. MongoDB local server running on `127.0.0.1:27017` or your custom URI
+
+### Install Dependencies
+From project root:
 
 ```bash
-# 1. Clone the repository
-git clone https://github.com/Henok-SE/Campus-Event-RSVP-Tracker.git
-cd Campus-Event-RSVP-Tracker
-
-# 2. Install all dependencies (frontend + backend)
 npm run install:all
+```
 
-# 3. Run backend server (Terminal 1)
+### Environment Setup
+Backend environment file:
+`backend/.env`
+
+Required variables:
+
+```env
+PORT=5000
+MONGODB_URI=mongodb://127.0.0.1:27017/eventDB
+JWT_SECRET=dev-jwt-secret-change-me
+```
+
+Reference template:
+`backend/.env.example`
+
+## Run the Project
+From project root:
+
+```bash
+# Terminal 1
 npm run dev:backend
 
-# 4. Run frontend app (Terminal 2)
+# Terminal 2
 npm run dev:frontend
 ```
 
-- Frontend: [http://localhost:5173](http://localhost:5173)
-- Backend API: [http://localhost:5000/api/health](http://localhost:5000/api/health)
+Default URLs:
+1. Frontend: `http://localhost:5173`
+2. Backend health: `http://localhost:5000/api/health`
 
----
+## Database Initialization and Seed Data
+The backend includes an idempotent seed script.
 
-## 📄 Project Charter
+Command:
 
-For full details on the project's scope, objectives, stakeholders, timeline, and risk analysis, see the Project Charter.
+```bash
+npm --prefix backend run db:seed
+```
 
-**📌 [View the Project Charter →](https://docs.google.com/document/d/1V2aqEorsikDaCRW1CAQ3osSluMpUpIewOEMrVOVfXCA/edit?usp=sharing)** <!-- Replace "#" with actual link when available -->
+What it does:
+1. Connects to MongoDB
+2. Syncs indexes
+3. Upserts sample users, events, RSVPs, and attendance records
 
----
+Seeded test accounts:
+1. `genene@campus.edu` / `Password123!` (Admin)
+2. `henok@campus.edu` / `Password123!` (Admin)
+3. `maya@campus.edu` / `Password123!` (Admin)
+4. `bedriya@campus.edu` / `Password123!` (Admin)
+5. `hana@campus.edu` / `Password123!` (Admin)
+6. `john.student@campus.edu` / `Password123!` (Student)
+7. `sara.student@campus.edu` / `Password123!` (Student)
 
-## 🤝 Contributing
+Seed profile summary:
+1. 7 total users
+2. 5 admins
+3. 2 students
 
-We love contributions! To get started:
+## Available Scripts
+Root scripts:
+1. `npm run install:all`
+2. `npm run dev:frontend`
+3. `npm run dev:backend`
+4. `npm run build:frontend`
+5. `npm run lint:frontend`
 
-1. **Fork** this repository
-2. **Create a new branch**
-   ```bash
-   git checkout -b feature/your-feature-name
-   ```
-3. **Commit your changes**
-   ```bash
-   git commit -m "Add feature"
-   ```
-4. **Push to your branch**
-   ```bash
-   git push origin feature/your-feature-name
-   ```
-5. **Open a Pull Request** to the `main` branch
+Backend scripts:
+1. `npm --prefix backend run dev`
+2. `npm --prefix backend run start`
+3. `npm --prefix backend run test`
+4. `npm --prefix backend run db:init`
+5. `npm --prefix backend run db:seed`
 
-**Guidelines**:
-- One feature or fix per branch
-- Use descriptive commit messages
-- All merges via Pull Request
+## Current API Surface (Backend)
+Base URL: `/api`
 
----
+Auth routes:
+1. `POST /auth/register`
+2. `POST /auth/login`
+3. `GET /auth/protected`
 
-## 📜 License
+Event routes:
+1. `GET /events`
+2. `GET /events/:id`
+3. `POST /events` (requires Authorization header)
 
-This project is licensed under the [MIT License](LICENSE).
+System routes:
+1. `GET /api/health`
+2. `GET /`
 
----
+## Testing and Quality Gates
+Backend API smoke tests are in:
+`backend/tests/api.test.js`
 
-## 🙌 Acknowledgments
+Run tests:
 
-Developed by the PCIC student team, Hawassa University.
+```bash
+npm --prefix backend run test
+```
 
----
+Team gate before merge:
+1. Backend tests pass
+2. No unresolved editor/lint errors in changed files
+3. README and env docs updated if behavior changed
+4. PR reviewed and approved
+
+## Team Implementation Rules
+These rules should be followed for all upcoming implementations.
+
+1. Do not change API response shapes without documenting it in PR notes.
+2. Schema/index changes require reviewer acknowledgement from backend and database owners.
+3. Every new endpoint must include at least one test case.
+4. Keep feature branches small and focused.
+5. Do not commit secrets.
+6. Update README sections whenever commands, endpoints, or setup flows change.
+
+## Suggested Team Sprint Flow
+For each sprint cycle:
+
+1. Planning
+   Lock scope and split tickets by owner.
+2. Build
+   Implement in feature branches with daily pulls from `main`.
+3. Integrate
+   Pair frontend-backend owners to verify contracts early.
+4. Validate
+   QA owner runs smoke scenarios and regression checks.
+5. Merge
+   Merge only reviewed PRs with passing checks.
+
+## Project Charter
+Project charter document:
+https://docs.google.com/document/d/1V2aqEorsikDaCRW1CAQ3osSluMpUpIewOEMrVOVfXCA/edit?usp=sharing
+
+## License
+This project is licensed under the MIT License. See `LICENSE`.
