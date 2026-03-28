@@ -35,6 +35,18 @@ exports.createEvent = async (req, res) => {
     });
 
   } catch (err) {
+    // Return a 400 for client-side validation/cast errors from Mongoose
+    if (
+      err instanceof mongoose.Error.ValidationError ||
+      err instanceof mongoose.Error.CastError ||
+      err.name === "ValidationError" ||
+      err.name === "CastError"
+    ) {
+      return res.status(400).json({
+        message: "Invalid event data",
+        details: err.message
+      });
+    }
     return res.status(500).json({ message: "Error creating event" });
   }
 };
