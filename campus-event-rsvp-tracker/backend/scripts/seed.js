@@ -4,6 +4,7 @@ const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 
 const User = require("../models/users");
+const Student = require("../models/student");
 const Event = require("../models/event");
 const RSVP = require("../models/rsvp");
 const Attendance = require("../models/attendance");
@@ -15,6 +16,7 @@ const seed = async () => {
   console.log("Connected to MongoDB for seeding");
 
   await Promise.all([
+    Student.syncIndexes(),
     User.syncIndexes(),
     Event.syncIndexes(),
     RSVP.syncIndexes(),
@@ -91,6 +93,21 @@ const seed = async () => {
     );
 
     usersByEmail[entry.email] = user;
+
+    await Student.findOneAndUpdate(
+      { student_id: entry.student_id },
+      {
+        $set: {
+          name: entry.name,
+          email: entry.email.toLowerCase(),
+          student_id: entry.student_id
+        }
+      },
+      {
+        returnDocument: "after",
+        upsert: true
+      }
+    );
   }
 
   const eventsData = [
@@ -100,7 +117,7 @@ const seed = async () => {
       location: "Engineering Hall",
       event_date: new Date("2026-04-05T09:00:00.000Z"),
       status: "Published",
-      created_by: usersByEmail["admin@campus.edu"]._id
+      created_by: usersByEmail["genene@campus.edu"]._id
     },
     {
       title: "Campus Music Fest",
@@ -108,7 +125,7 @@ const seed = async () => {
       location: "Main Stadium",
       event_date: new Date("2026-04-12T15:00:00.000Z"),
       status: "Published",
-      created_by: usersByEmail["admin@campus.edu"]._id
+      created_by: usersByEmail["genene@campus.edu"]._id
     }
   ];
 
@@ -169,7 +186,8 @@ const seed = async () => {
     }
   );
 
-  const [userCount, eventCount, rsvpCount, attendanceCount] = await Promise.all([
+  const [studentCount, userCount, eventCount, rsvpCount, attendanceCount] = await Promise.all([
+    Student.countDocuments(),
     User.countDocuments(),
     Event.countDocuments(),
     RSVP.countDocuments(),
@@ -177,6 +195,7 @@ const seed = async () => {
   ]);
 
   console.log("Seeding complete");
+  console.log(`Students: ${studentCount}`);
   console.log(`Users: ${userCount}`);
   console.log(`Events: ${eventCount}`);
   console.log(`RSVPs: ${rsvpCount}`);

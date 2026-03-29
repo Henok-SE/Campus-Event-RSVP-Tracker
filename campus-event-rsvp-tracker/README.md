@@ -144,16 +144,48 @@ npm --prefix backend run db:seed
 What it does:
 1. Connects to MongoDB
 2. Syncs indexes
-3. Upserts sample users, events, RSVPs, and attendance records
+3. Upserts sample student roster records, users, events, RSVPs, and attendance records
+
+## Student Roster Intake (PDF)
+The Student collection is the trusted roster source for registration.
+
+Security policy:
+1. Original roster PDFs contain sensitive student data and must not be committed.
+2. Store PDFs locally in `backend/data/source_docs/`.
+3. Real PDF files are ignored by `.gitignore`.
+
+Default file name:
+1. `backend/data/source_docs/students.pdf`
+
+Import command:
+
+```bash
+npm --prefix backend run db:import:students -- backend/data/source_docs/students.pdf
+```
+
+Expected parsed row format inside PDF text:
+1. `STU-1001, John Student, john.student@campus.edu`
+2. `John Student, STU-1001, john.student@campus.edu`
+
+Import output summary includes:
+1. Rows parsed
+2. Inserted
+3. Updated
+4. Skipped (unchanged)
+5. Invalid rows
 
 Seeded test accounts:
-1. `genene@campus.edu` / `Password123!` (Admin)
-2. `henok@campus.edu` / `Password123!` (Admin)
-3. `maya@campus.edu` / `Password123!` (Admin)
-4. `bedriya@campus.edu` / `Password123!` (Admin)
-5. `hana@campus.edu` / `Password123!` (Admin)
-6. `john.student@campus.edu` / `Password123!` (Student)
-7. `sara.student@campus.edu` / `Password123!` (Student)
+1. `ADM-0001` / `Password123!` (Admin)
+2. `ADM-0002` / `Password123!` (Admin)
+3. `ADM-0003` / `Password123!` (Admin)
+4. `ADM-0004` / `Password123!` (Admin)
+5. `ADM-0005` / `Password123!` (Admin)
+6. `STU-1001` / `Password123!` (Student)
+7. `STU-1002` / `Password123!` (Student)
+
+Authentication note:
+1. Login uses `student_id + password`.
+2. Registration is allowed only when `student_id` exists in the Student roster.
 
 Seed profile summary:
 1. 7 total users
@@ -174,6 +206,7 @@ Backend scripts:
 3. `npm --prefix backend run test`
 4. `npm --prefix backend run db:init`
 5. `npm --prefix backend run db:seed`
+6. `npm --prefix backend run db:import:students -- backend/data/source_docs/students.pdf`
 
 ## Current API Surface (Backend)
 Base URL: `/api`
@@ -182,6 +215,10 @@ Auth routes:
 1. `POST /auth/register`
 2. `POST /auth/login`
 3. `GET /auth/protected`
+
+Auth payloads:
+1. Register request body: `student_id`, `password` (optional `name` and `email` are validated against roster when provided)
+2. Login request body: `student_id`, `password`
 
 Event routes:
 1. `GET /events`

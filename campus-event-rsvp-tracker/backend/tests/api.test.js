@@ -17,6 +17,16 @@ jest.mock("../models/users", () => {
   return User;
 });
 
+jest.mock("../models/student", () => {
+  const Student = jest.fn(function studentModel(data) {
+    Object.assign(this, data);
+  });
+
+  Student.findOne = jest.fn();
+
+  return Student;
+});
+
 jest.mock("../models/event", () => {
   const Event = jest.fn(function eventModel(data) {
     Object.assign(this, data);
@@ -30,6 +40,7 @@ jest.mock("../models/event", () => {
 });
 
 const User = require("../models/users");
+const Student = require("../models/student");
 const Event = require("../models/event");
 const { app } = require("../server");
 
@@ -47,6 +58,11 @@ describe("Backend API smoke tests", () => {
   });
 
   test("POST /api/auth/register returns 201", async () => {
+    Student.findOne.mockResolvedValue({
+      student_id: "STU-001",
+      name: "Jane",
+      email: "jane@example.com"
+    });
     User.findOne.mockResolvedValue(null);
     const mockSave = jest.fn().mockResolvedValue(undefined);
     User.prototype.save = mockSave;
@@ -62,8 +78,20 @@ describe("Backend API smoke tests", () => {
 
     expect(res.status).toBe(201);
     expect(res.body.message).toBe("User registered successfully");
-    expect(User.findOne).toHaveBeenCalledWith({ email: "jane@example.com" });
+    expect(Student.findOne).toHaveBeenCalledWith({ student_id: "STU-001" });
     expect(hashSpy).toHaveBeenCalled();
+  });
+
+  test("POST /api/auth/register rejects unknown student id", async () => {
+    Student.findOne.mockResolvedValue(null);
+
+    const res = await request(app).post("/api/auth/register").send({
+      student_id: "STU-999",
+      password: "pass1234"
+    });
+
+    expect(res.status).toBe(403);
+    expect(res.body.message).toBe("student_id is not authorized for registration");
   });
 
   test("POST /api/auth/login returns token", async () => {
@@ -79,7 +107,7 @@ describe("Backend API smoke tests", () => {
     const compareSpy = jest.spyOn(bcrypt, "compare").mockResolvedValue(true);
 
     const res = await request(app).post("/api/auth/login").send({
-      email: "jane@example.com",
+      student_id: "STU-001",
       password: "pass1234"
     });
 

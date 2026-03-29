@@ -3,16 +3,47 @@
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const User = require("../models/users");
+const Student = require("../models/student");
+
+const STUDENT_ID_PATTERN = /^(STU|ADM)-\d+$/i;
+
+const normalizeStudentId = (value = "") => value.trim().toUpperCase();
+const normalizeEmail = (value = "") => value.trim().toLowerCase();
 
 exports.register = async (req, res) => {
   try {
     const { name, email, student_id, password } = req.body;
 
-    if (!name || !email || !student_id || !password) {
-      return res.status(400).json({ message: "name, email, student_id, and password are required" });
+    if (!student_id || !password) {
+      return res.status(400).json({ message: "student_id and password are required" });
     }
 
-    const userExists = await User.findOne({ email });
+    const normalizedStudentId = normalizeStudentId(student_id);
+
+    if (!STUDENT_ID_PATTERN.test(normalizedStudentId)) {
+      return res.status(400).json({ message: "student_id format is invalid" });
+    }
+
+    const rosterStudent = await Student.findOne({ student_id: normalizedStudentId });
+
+    if (!rosterStudent) {
+      return res.status(403).json({ message: "student_id is not authorized for registration" });
+    }
+
+    if (email && normalizeEmail(email) !== rosterStudent.email) {
+      return res.status(400).json({ message: "email does not match student roster" });
+    }
+
+    if (name && name.trim() !== rosterStudent.name) {
+      return res.status(400).json({ message: "name does not match student roster" });
+    }
+
+    const userExists = await User.findOne({
+      $or: [
+        { student_id: normalizedStudentId },
+        { email: rosterStudent.email }
+      ]
+    });
 
     if (userExists) {
       return res.status(400).json({ message: "User already exists" });
@@ -21,9 +52,9 @@ exports.register = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const user = new User({
-      name,
-      email,
-      student_id,
+      name: rosterStudent.name,
+      email: rosterStudent.email,
+      student_id: normalizedStudentId,
       password: hashedPassword
     });
 
@@ -57,13 +88,19 @@ exports.register = async (req, res) => {
 
 exports.login = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { student_id, password } = req.body;
 
-    if (!email || !password) {
-      return res.status(400).json({ message: "email and password are required" });
+    if (!student_id || !password) {
+      return res.status(400).json({ message: "student_id and password are required" });
     }
 
-    const user = await User.findOne({ email });
+    const normalizedStudentId = normalizeStudentId(student_id);
+
+    if (!STUDENT_ID_PATTERN.test(normalizedStudentId)) {
+      return res.status(400).json({ message: "student_id format is invalid" });
+    }
+
+    const user = await User.findOne({ student_id: normalizedStudentId });
 
     if (!user) {
       return res.status(400).json({ message: "User not found" });
