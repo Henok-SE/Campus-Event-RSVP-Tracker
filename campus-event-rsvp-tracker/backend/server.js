@@ -8,6 +8,7 @@ const rateLimit = require("express-rate-limit");
 
 const authRoutes = require("./routes/authRoutes");
 const eventRoutes = require("./routes/eventRoutes");
+const rsvpRoutes = require("./routes/rsvpRoutes");
 
 const app = express();
 
@@ -32,6 +33,7 @@ app.get("/api/health", (req, res) => {
 
 app.use("/api/auth", authRoutes);
 app.use("/api/events", eventRoutes);
+app.use("/api/rsvp", rsvpRoutes);
 
 app.use((err, req, res, next) => {
   if (res.headersSent) {
