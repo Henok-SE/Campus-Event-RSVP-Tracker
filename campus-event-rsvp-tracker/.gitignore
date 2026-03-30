@@ -22,3 +22,9 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Sensitive student roster source files
+backend/data/*.pdf
+backend/data/*.PDF
+backend/data/source_docs/*.pdf
+backend/data/source_docs/*.PDF
