@@ -13,6 +13,37 @@ location:String,
 
 event_date:Date,
 
+time: {
+type: String,
+trim: true
+},
+
+capacity: {
+type: Number,
+min: 1
+},
+
+category: {
+type: String,
+trim: true
+},
+
+tags: [{
+type: String,
+trim: true
+}],
+
+image_url: {
+type: String,
+trim: true
+},
+
+attending_count: {
+type: Number,
+default: 0,
+min: 0
+},
+
 status:{
 type:String,
 enum:["Draft", "Published", "Ongoing", "Completed", "Cancelled"],
