@@ -28,9 +28,20 @@ type: String,
 trim: true
 },
 
+tags: [{
+type: String,
+trim: true
+}],
+
 image_url: {
 type: String,
 trim: true
+},
+
+attending_count: {
+type: Number,
+default: 0,
+min: 0
 },
 
 status:{

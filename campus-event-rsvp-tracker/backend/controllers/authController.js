@@ -4,6 +4,7 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const User = require("../models/users");
 const Student = require("../models/student");
+const { sendSuccess, sendError } = require("../utils/apiResponse");
 
 const STUDENT_ID_PATTERN = /^(STU|ADM)-\d+$/i;
 
@@ -15,27 +16,47 @@ exports.register = async (req, res) => {
     const { name, email, student_id, password } = req.body;
 
     if (!student_id || !password) {
-      return res.status(400).json({ message: "student_id and password are required" });
+      return sendError(res, {
+        status: 400,
+        code: "VALIDATION_ERROR",
+        message: "student_id and password are required"
+      });
     }
 
     const normalizedStudentId = normalizeStudentId(student_id);
 
     if (!STUDENT_ID_PATTERN.test(normalizedStudentId)) {
-      return res.status(400).json({ message: "student_id format is invalid" });
+      return sendError(res, {
+        status: 400,
+        code: "VALIDATION_ERROR",
+        message: "student_id format is invalid"
+      });
     }
 
     const rosterStudent = await Student.findOne({ student_id: normalizedStudentId });
 
     if (!rosterStudent) {
-      return res.status(403).json({ message: "student_id is not authorized for registration" });
+      return sendError(res, {
+        status: 403,
+        code: "REGISTRATION_FORBIDDEN",
+        message: "student_id is not authorized for registration"
+      });
     }
 
     if (email && normalizeEmail(email) !== rosterStudent.email) {
-      return res.status(400).json({ message: "email does not match student roster" });
+      return sendError(res, {
+        status: 400,
+        code: "VALIDATION_ERROR",
+        message: "email does not match student roster"
+      });
     }
 
     if (name && name.trim() !== rosterStudent.name) {
-      return res.status(400).json({ message: "name does not match student roster" });
+      return sendError(res, {
+        status: 400,
+        code: "VALIDATION_ERROR",
+        message: "name does not match student roster"
+      });
     }
 
     const userExists = await User.findOne({
@@ -46,7 +67,11 @@ exports.register = async (req, res) => {
     });
 
     if (userExists) {
-      return res.status(400).json({ message: "User already exists" });
+      return sendError(res, {
+        status: 409,
+        code: "DUPLICATE_ENTRY",
+        message: "User already exists"
+      });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -60,7 +85,8 @@ exports.register = async (req, res) => {
 
     await user.save();
 
-    return res.status(201).json({
+    return sendSuccess(res, {
+      status: 201,
       message: "User registered successfully",
       data: {
         id: user._id,
@@ -77,12 +103,18 @@ exports.register = async (req, res) => {
       const fieldFromValue = !fieldFromPattern && error.keyValue ? Object.keys(error.keyValue)[0] : undefined;
       const field = fieldFromPattern || fieldFromValue || "field";
 
-      return res.status(409).json({
+      return sendError(res, {
+        status: 409,
+        code: "DUPLICATE_ENTRY",
         message: `A user with this ${field} already exists`,
-        field
+        details: { field }
       });
     }
-    return res.status(500).json({ message: "Failed to register user" });
+    return sendError(res, {
+      status: 500,
+      code: "REGISTER_FAILED",
+      message: "Failed to register user"
+    });
   }
 };
 
@@ -91,38 +123,59 @@ exports.login = async (req, res) => {
     const { student_id, password } = req.body;
 
     if (!student_id || !password) {
-      return res.status(400).json({ message: "student_id and password are required" });
+      return sendError(res, {
+        status: 400,
+        code: "VALIDATION_ERROR",
+        message: "student_id and password are required"
+      });
     }
 
     const normalizedStudentId = normalizeStudentId(student_id);
 
     if (!STUDENT_ID_PATTERN.test(normalizedStudentId)) {
-      return res.status(400).json({ message: "student_id format is invalid" });
+      return sendError(res, {
+        status: 400,
+        code: "VALIDATION_ERROR",
+        message: "student_id format is invalid"
+      });
     }
 
     const user = await User.findOne({ student_id: normalizedStudentId });
 
     if (!user) {
-      return res.status(400).json({ message: "User not found" });
+      return sendError(res, {
+        status: 404,
+        code: "USER_NOT_FOUND",
+        message: "User not found"
+      });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
 
     if (!isMatch) {
-      return res.status(400).json({ message: "Invalid password" });
+      return sendError(res, {
+        status: 401,
+        code: "INVALID_CREDENTIALS",
+        message: "Invalid password"
+      });
     }
 
     if (!process.env.JWT_SECRET) {
-      return res.status(500).json({ message: "JWT_SECRET is not configured" });
+      return sendError(res, {
+        status: 500,
+        code: "CONFIGURATION_ERROR",
+        message: "JWT_SECRET is not configured"
+      });
     }
 
     const token = jwt.sign(
-      { id: user._id },
+      { id: user._id, role: user.role },
       process.env.JWT_SECRET,
       { expiresIn: "1d" }
     );
 
-    return res.status(200).json({
+    return sendSuccess(res, {
+      status: 200,
       message: "Login successful",
       data: {
         token,
@@ -137,6 +190,50 @@ exports.login = async (req, res) => {
     });
 
   } catch (error) {
-    return res.status(500).json({ message: "Failed to login" });
+    return sendError(res, {
+      status: 500,
+      code: "LOGIN_FAILED",
+      message: "Failed to login"
+    });
+  }
+};
+
+exports.me = async (req, res) => {
+  try {
+    if (!req.user || !req.user.id) {
+      return sendError(res, {
+        status: 401,
+        code: "UNAUTHORIZED",
+        message: "Unauthorized"
+      });
+    }
+
+    const user = await User.findById(req.user.id).select("_id name email student_id role");
+
+    if (!user) {
+      return sendError(res, {
+        status: 404,
+        code: "USER_NOT_FOUND",
+        message: "User not found"
+      });
+    }
+
+    return sendSuccess(res, {
+      status: 200,
+      message: "Current user fetched",
+      data: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        student_id: user.student_id,
+        role: user.role
+      }
+    });
+  } catch (error) {
+    return sendError(res, {
+      status: 500,
+      code: "CURRENT_USER_FETCH_FAILED",
+      message: "Failed to fetch current user"
+    });
   }
 };

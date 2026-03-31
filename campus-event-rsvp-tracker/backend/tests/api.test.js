@@ -12,6 +12,7 @@ jest.mock("../models/users", () => {
   });
 
   User.findOne = jest.fn();
+  User.findById = jest.fn();
   User.prototype.save = jest.fn();
 
   return User;
@@ -34,6 +35,8 @@ jest.mock("../models/event", () => {
 
   Event.find = jest.fn();
   Event.findById = jest.fn();
+  Event.findOneAndUpdate = jest.fn();
+  Event.updateOne = jest.fn();
   Event.deleteOne = jest.fn();
   Event.prototype.save = jest.fn();
 
@@ -46,6 +49,7 @@ jest.mock("../models/rsvp", () => {
   });
 
   RSVP.find = jest.fn();
+  RSVP.findOne = jest.fn();
   RSVP.countDocuments = jest.fn();
   RSVP.findOneAndDelete = jest.fn();
   RSVP.deleteMany = jest.fn();
@@ -70,7 +74,8 @@ describe("Backend API smoke tests", () => {
     const res = await request(app).get("/api/health");
 
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ status: "ok" });
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.status).toBe("ok");
   });
 
   test("POST /api/auth/register returns 201", async () => {
@@ -107,7 +112,7 @@ describe("Backend API smoke tests", () => {
     });
 
     expect(res.status).toBe(403);
-    expect(res.body.message).toBe("student_id is not authorized for registration");
+    expect(res.body.error.message).toBe("student_id is not authorized for registration");
   });
 
   test("POST /api/auth/login returns token", async () => {
@@ -132,6 +137,27 @@ describe("Backend API smoke tests", () => {
     expect(compareSpy).toHaveBeenCalled();
   });
 
+  test("GET /api/auth/me returns current user", async () => {
+    const token = jwt.sign({ id: "507f1f77bcf86cd799439011", role: "Student" }, process.env.JWT_SECRET);
+    User.findById.mockReturnValue({
+      select: jest.fn().mockResolvedValue({
+        _id: "507f1f77bcf86cd799439011",
+        name: "Jane",
+        email: "jane@example.com",
+        student_id: "STU-001",
+        role: "Student"
+      })
+    });
+
+    const res = await request(app)
+      .get("/api/auth/me")
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.student_id).toBe("STU-001");
+  });
+
   test("GET /api/auth/protected requires valid token", async () => {
     const token = jwt.sign({ id: "507f1f77bcf86cd799439011" }, process.env.JWT_SECRET);
 
@@ -141,6 +167,7 @@ describe("Backend API smoke tests", () => {
 
     expect(res.status).toBe(200);
     expect(res.body.message).toBe("You are authorized");
+    expect(res.body.success).toBe(true);
   });
 
   test("GET /api/events returns events", async () => {
@@ -169,7 +196,7 @@ describe("Backend API smoke tests", () => {
     const res = await request(app).get("/api/events/not-a-valid-id");
 
     expect(res.status).toBe(400);
-    expect(res.body.message).toBe("Invalid event id");
+    expect(res.body.error.message).toBe("Invalid id");
   });
 
   test("GET /api/events/:id returns event", async () => {
@@ -245,8 +272,9 @@ describe("Backend API smoke tests", () => {
     const eventId = new mongoose.Types.ObjectId().toString();
     const mockSave = jest.fn().mockResolvedValue(undefined);
 
-    Event.findById.mockResolvedValue({ _id: eventId, capacity: 100 });
-    RSVP.countDocuments.mockResolvedValue(1);
+    RSVP.findOne.mockResolvedValue(null);
+    Event.findById.mockResolvedValue({ _id: eventId, capacity: 100, status: "Published" });
+    Event.findOneAndUpdate.mockResolvedValue({ _id: eventId, attending_count: 1 });
     RSVP.prototype.save = mockSave;
 
     const res = await request(app)
@@ -263,8 +291,9 @@ describe("Backend API smoke tests", () => {
     const token = jwt.sign({ id: "507f1f77bcf86cd799439011" }, process.env.JWT_SECRET);
     const eventId = new mongoose.Types.ObjectId().toString();
 
-    Event.findById.mockResolvedValue({ _id: eventId, capacity: 1 });
-    RSVP.countDocuments.mockResolvedValue(1);
+    RSVP.findOne.mockResolvedValue(null);
+    Event.findById.mockResolvedValue({ _id: eventId, capacity: 1, status: "Published" });
+    Event.findOneAndUpdate.mockResolvedValue(null);
 
     const res = await request(app)
       .post("/api/rsvp")
@@ -272,7 +301,19 @@ describe("Backend API smoke tests", () => {
       .send({ event_id: eventId });
 
     expect(res.status).toBe(409);
-    expect(res.body.message).toBe("Event is full");
+    expect(res.body.error.message).toBe("Event is full");
+  });
+
+  test("POST /api/rsvp rejects invalid payload", async () => {
+    const token = jwt.sign({ id: "507f1f77bcf86cd799439011" }, process.env.JWT_SECRET);
+
+    const res = await request(app)
+      .post("/api/rsvp")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ event_id: "bad-id" });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe("VALIDATION_ERROR");
   });
 
   test("DELETE /api/rsvp/:eventId cancels RSVP", async () => {
@@ -287,6 +328,7 @@ describe("Backend API smoke tests", () => {
 
     expect(res.status).toBe(200);
     expect(res.body.message).toBe("RSVP cancelled");
+    expect(Event.updateOne).toHaveBeenCalled();
   });
 
   test("GET /api/rsvp/my returns my RSVPs", async () => {
@@ -318,5 +360,13 @@ describe("Backend API smoke tests", () => {
     expect(res.status).toBe(200);
     expect(Array.isArray(res.body.data)).toBe(true);
     expect(res.body.data[0].event.title).toBe("Hackathon");
+  });
+
+  test("GET unknown route returns not found envelope", async () => {
+    const res = await request(app).get("/api/unknown-route");
+
+    expect(res.status).toBe(404);
+    expect(res.body.success).toBe(false);
+    expect(res.body.error.code).toBe("NOT_FOUND");
   });
 });

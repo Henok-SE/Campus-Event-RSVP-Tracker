@@ -1,14 +1,23 @@
 const jwt = require("jsonwebtoken");
+const { sendError } = require("../utils/apiResponse");
 
 const authMiddleware = (req, res, next) => {
     const authHeader = req.headers.authorization;
 
     if (!authHeader) {
-        return res.status(401).json({ message: "Access denied. No token provided" });
+        return sendError(res, {
+            status: 401,
+            code: "UNAUTHORIZED",
+            message: "Access denied. No token provided"
+        });
     }
 
     if (!process.env.JWT_SECRET) {
-        return res.status(500).json({ message: "JWT_SECRET is not configured" });
+        return sendError(res, {
+            status: 500,
+            code: "CONFIGURATION_ERROR",
+            message: "JWT_SECRET is not configured"
+        });
     }
 
     try {
@@ -22,7 +31,11 @@ const authMiddleware = (req, res, next) => {
 
         return next();
     } catch (error) {
-        return res.status(401).json({ message: "Invalid token" });
+        return sendError(res, {
+            status: 401,
+            code: "INVALID_TOKEN",
+            message: "Invalid token"
+        });
     }
 
 };

@@ -1,14 +1,16 @@
 const express = require("express");
 const router = express.Router();
 
-const { register, login } = require("../controllers/authController");
+const { register, login, me } = require("../controllers/authController");
 const authMiddleware = require("../middlewares/authMiddleware");
+const { validateRequired } = require("../middlewares/validateRequest");
 
-router.post("/register", register);
-router.post("/login", login);
+router.post("/register", validateRequired(["student_id", "password"]), register);
+router.post("/login", validateRequired(["student_id", "password"]), login);
+router.get("/me", authMiddleware, me);
 
 router.get("/protected", authMiddleware, (req, res) => {
-  res.json({ message: "You are authorized" });
+  res.json({ success: true, message: "You are authorized", data: null });
 });
 
 module.exports = router;
