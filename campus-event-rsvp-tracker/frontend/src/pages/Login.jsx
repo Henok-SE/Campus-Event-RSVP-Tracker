@@ -1,11 +1,22 @@
 // src/pages/Login.jsx
 import { useAuth } from '../context/AuthContext';
-import { useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
 
 export default function Login() {
-  const { login } = useAuth();
+  const { isAuthLoading, isLoggedIn, login, register } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const [mode, setMode] = useState('login');
+  const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
+
+  const redirectTarget = useMemo(() => {
+    const params = new URLSearchParams(location.search);
+    const candidate = params.get('redirect');
+    return candidate && candidate.startsWith('/') ? candidate : '/dashboard';
+  }, [location.search]);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -14,21 +25,48 @@ export default function Login() {
     password: ''
   });
 
+  useEffect(() => {
+    if (!isAuthLoading && isLoggedIn) {
+      navigate(redirectTarget, { replace: true });
+    }
+  }, [isAuthLoading, isLoggedIn, navigate, redirectTarget]);
+
   const handleChange = (e) => {
+    setErrorMessage('');
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSignUp = () => {
-    // Store all data based on your database schema
-    const newUser = {
-      name: formData.name,
-      student_id: formData.student_id,
-      email: formData.email,
-      role: "Student"   // default role
-    };
+  const handleSubmit = async (e) => {
+    e.preventDefault();
 
-    login(formData.email, "Student", newUser);   // updated login function
-    navigate('/dashboard', { replace: true });
+    setLoading(true);
+    setErrorMessage('');
+    setSuccessMessage('');
+
+    try {
+      if (mode === 'register') {
+        await register({
+          name: formData.name.trim() || undefined,
+          email: formData.email.trim() || undefined,
+          student_id: formData.student_id.trim(),
+          password: formData.password
+        });
+
+        setSuccessMessage('Account created successfully. Please sign in.');
+        setMode('login');
+      } else {
+        await login({
+          student_id: formData.student_id.trim(),
+          password: formData.password
+        });
+
+        navigate(redirectTarget, { replace: true });
+      }
+    } catch (error) {
+      setErrorMessage(error?.message || 'Authentication failed');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -41,71 +79,127 @@ export default function Login() {
         <h1 className="text-center text-3xl font-semibold mb-2">CampusVibe</h1>
         <p className="text-center text-slate-500 mb-10">Discover &amp; RSVP to campus events</p>
 
-        <h2 className="text-2xl font-semibold text-center mb-8">Create Account</h2>
+                <div className="flex gap-3 bg-slate-100 rounded-2xl p-1 mb-8">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMode('login');
+                      setErrorMessage('');
+                    }}
+                    className={`flex-1 py-3 rounded-xl font-medium transition-all ${
+                      mode === 'login' ? 'bg-white shadow text-slate-900' : 'text-slate-500'
+                    }`}
+                  >
+                    Sign In
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMode('register');
+                      setErrorMessage('');
+                    }}
+                    className={`flex-1 py-3 rounded-xl font-medium transition-all ${
+                      mode === 'register' ? 'bg-white shadow text-slate-900' : 'text-slate-500'
+                    }`}
+                  >
+                    Create Account
+                  </button>
+                </div>
 
-        <div className="space-y-6">
-          {/* Name */}
-          <div>
-            <label className="block text-sm font-medium mb-2">Full Name</label>
-            <input 
-              type="text" 
-              name="name"
-              value={formData.name}
-              onChange={handleChange}
-              className="w-full px-5 py-4 border border-slate-300 rounded-2xl focus:outline-none focus:border-blue-600" 
-              placeholder="John Doe" 
-            />
-          </div>
+                <h2 className="text-2xl font-semibold text-center mb-8">
+                  {mode === 'register' ? 'Create Account' : 'Welcome Back'}
+                </h2>
 
-          {/* Student ID */}
+                {errorMessage ? (
+                  <div className="mb-5 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                    {errorMessage}
+                  </div>
+                ) : null}
+
+                {successMessage ? (
+                  <div className="mb-5 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+                    {successMessage}
+                  </div>
+                ) : null}
+
+                <form onSubmit={handleSubmit} className="space-y-6">
+                  {mode === 'register' ? (
+                    <>
+                      <div>
+                        <label className="block text-sm font-medium mb-2">Full Name (optional)</label>
+                        <input
+                          type="text"
+                          name="name"
+                          value={formData.name}
+                          onChange={handleChange}
+                          className="w-full px-5 py-4 border border-slate-300 rounded-2xl focus:outline-none focus:border-blue-600"
+                          placeholder="John Student"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium mb-2">Email (optional)</label>
+                        <input
+                          type="email"
+                          name="email"
+                          value={formData.email}
+                          onChange={handleChange}
+                          className="w-full px-5 py-4 border border-slate-300 rounded-2xl focus:outline-none focus:border-blue-600"
+                          placeholder="john.student@campus.edu"
+                        />
+                      </div>
+                    </>
+                  ) : null}
+
           <div>
             <label className="block text-sm font-medium mb-2">Student ID</label>
-            <input 
-              type="text" 
+                    <input
+                      type="text"
               name="student_id"
               value={formData.student_id}
               onChange={handleChange}
-              className="w-full px-5 py-4 border border-slate-300 rounded-2xl focus:outline-none focus:border-blue-600" 
-              placeholder="U123456" 
+                      className="w-full px-5 py-4 border border-slate-300 rounded-2xl focus:outline-none focus:border-blue-600"
+                      placeholder="STU-1001"
+                      required
             />
           </div>
 
-          {/* Email */}
-          <div>
-            <label className="block text-sm font-medium mb-2"> Email</label>
-            <input 
-              type="email" 
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              className="w-full px-5 py-4 border border-slate-300 rounded-2xl focus:outline-none focus:border-blue-600" 
-              placeholder="you@example.com" 
-            />
-          </div>
-
-          {/* Password */}
           <div>
             <label className="block text-sm font-medium mb-2">Password</label>
-            <input 
-              type="password" 
+                    <input
+                      type="password"
               name="password"
               value={formData.password}
               onChange={handleChange}
-              className="w-full px-5 py-4 border border-slate-300 rounded-2xl focus:outline-none focus:border-blue-600" 
-              placeholder="••••••••" 
+                      className="w-full px-5 py-4 border border-slate-300 rounded-2xl focus:outline-none focus:border-blue-600"
+                      placeholder="Password123!"
+                      required
             />
           </div>
-        </div>
 
-        <button 
-          onClick={handleSignUp}
-          className="mt-8 w-full bg-blue-600 hover:bg-blue-700 text-white py-5 rounded-2xl font-semibold text-lg transition-all"
-        >
-          Create Account
-        </button>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="mt-2 w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white py-5 rounded-2xl font-semibold text-lg transition-all"
+                  >
+                    {loading
+                      ? (mode === 'register' ? 'Creating Account...' : 'Signing In...')
+                      : (mode === 'register' ? 'Create Account' : 'Sign In')}
+                  </button>
+                </form>
 
         <p className="text-center mt-8 text-sm text-slate-600">
-          Already have an account? <span className="text-blue-600 font-medium cursor-pointer">Sign in</span>
+                  {mode === 'register' ? 'Already have an account?' : 'Need an account?'}{' '}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMode((prev) => (prev === 'register' ? 'login' : 'register'));
+                      setErrorMessage('');
+                    }}
+                    className="text-blue-600 font-medium"
+                  >
+                    {mode === 'register' ? 'Sign in' : 'Create one'}
+                  </button>
         </p>
       </div>
     </div>

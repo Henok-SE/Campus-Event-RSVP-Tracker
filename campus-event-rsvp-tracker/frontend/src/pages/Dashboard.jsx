@@ -1,7 +1,6 @@
 // src/pages/Dashboard.jsx
 import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
 import DashboardNavbar from '../components/common/DashboardNavbar';
 import Footer from '../components/common/Footer';
 import { useDebounce } from '../hooks/useDebounce';
@@ -45,7 +44,6 @@ const bottomEventsInitial = [
 ];
 
 export default function Dashboard() {
-  const { user } = useAuth();
   const [currentSlide, setCurrentSlide] = useState(0);
   const [rsvpCount, setRsvpCount] = useState(0);
   const [mySchedule, setMySchedule] = useState([]);

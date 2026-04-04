@@ -1,12 +1,10 @@
 // src/pages/MySchedule.jsx
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
 import Footer from '../components/common/Footer';
-import { Calendar, MapPin, Users, Clock, X } from 'lucide-react';
+import { Calendar, MapPin, Users, X } from 'lucide-react';
 
 export default function MySchedule() {
-  const { user } = useAuth();
   const [myEvents, setMyEvents] = useState([]);
   const [loading, setLoading] = useState(true);
 
