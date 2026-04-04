@@ -1,7 +1,9 @@
 import axios from 'axios';
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+
 const api = axios.create({
-  baseURL: 'http://localhost:5000/api', // change when backend is ready
+  baseURL: API_BASE_URL,
   headers: { 'Content-Type': 'application/json' }
 });
 
@@ -13,6 +15,21 @@ export const setAuthToken = (token) => {
 
   delete api.defaults.headers.common.Authorization;
 };
+
+export const clearAuthToken = () => {
+  delete api.defaults.headers.common.Authorization;
+};
+
+export const getApiError = (error, fallbackMessage = 'Request failed') => {
+  const code = error?.response?.data?.error?.code || 'REQUEST_FAILED';
+  const message = error?.response?.data?.error?.message || fallbackMessage;
+
+  return { code, message };
+};
+
+export const registerUser = (payload) => api.post('/auth/register', payload);
+export const loginUser = (payload) => api.post('/auth/login', payload);
+export const getCurrentUser = () => api.get('/auth/me');
 
 export const getEvents = () => api.get('/events');
 export const getEventById = (eventId) => api.get(`/events/${eventId}`);

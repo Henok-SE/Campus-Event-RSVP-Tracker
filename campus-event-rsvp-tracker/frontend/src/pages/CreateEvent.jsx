@@ -1,12 +1,10 @@
 // src/pages/CreateEvent.jsx
 import { useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
 import Footer from '../components/common/Footer';
-import { Upload, X, Image as ImageIcon } from 'lucide-react';
+import { X, Image as ImageIcon } from 'lucide-react';
 
 export default function CreateEvent() {
-  const { user } = useAuth();
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
 
@@ -21,7 +19,6 @@ export default function CreateEvent() {
     is_free: true,
   });
 
-  const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   const [loading, setLoading] = useState(false);
 
@@ -48,8 +45,6 @@ export default function CreateEvent() {
       return;
     }
 
-    setImageFile(file);
-    
     // Create preview
     const reader = new FileReader();
     reader.onloadend = () => {
@@ -59,7 +54,6 @@ export default function CreateEvent() {
   };
 
   const removeImage = () => {
-    setImageFile(null);
     setImagePreview(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };

@@ -1,45 +1,136 @@
 // src/context/AuthContext.jsx
 import { createContext, useContext, useState, useEffect } from 'react';
+import {
+  clearAuthToken,
+  getApiError,
+  getCurrentUser,
+  loginUser,
+  registerUser,
+  setAuthToken
+} from '../services/api';
 
 const AuthContext = createContext();
+const AUTH_USER_STORAGE_KEY = 'campusvibe_user';
+const AUTH_TOKEN_STORAGE_KEY = 'campusvibe_token';
 
-export function AuthProvider({ children }) {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [user, setUser] = useState(null);
+const safeParseUser = () => {
+  const saved = localStorage.getItem(AUTH_USER_STORAGE_KEY);
+  if (!saved) {
+    return null;
+  }
 
-  useEffect(() => {
-    const saved = localStorage.getItem('campusvibe_user');
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      setIsLoggedIn(true);
-      setUser(parsed);
-    }
-  }, []);
-
- const login = (email, role = "Student", userData = {}) => {
-  const fullUser = {
-    email,
-    name: userData.name || "Henok",
-    student_id: userData.student_id || "U123456",
-    role,
-    ...userData
-  };
-  localStorage.setItem('campusvibe_user', JSON.stringify(fullUser));
-  setIsLoggedIn(true);
-  setUser(fullUser);
+  try {
+    return JSON.parse(saved);
+  } catch {
+    localStorage.removeItem(AUTH_USER_STORAGE_KEY);
+    return null;
+  }
 };
 
+export function AuthProvider({ children }) {
+  const [token, setToken] = useState(() => localStorage.getItem(AUTH_TOKEN_STORAGE_KEY));
+  const [user, setUser] = useState(() => safeParseUser());
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
+
+  const isLoggedIn = Boolean(token && user);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const bootAuth = async () => {
+      if (!token) {
+        if (isMounted) {
+          clearAuthToken();
+          setIsAuthLoading(false);
+        }
+        return;
+      }
+
+      setAuthToken(token);
+
+      try {
+        const response = await getCurrentUser();
+        const currentUser = response?.data?.data;
+
+        if (!currentUser) {
+          throw new Error('Invalid auth response');
+        }
+
+        if (!isMounted) {
+          return;
+        }
+
+        localStorage.setItem(AUTH_USER_STORAGE_KEY, JSON.stringify(currentUser));
+        setUser(currentUser);
+      } catch {
+        if (!isMounted) {
+          return;
+        }
+
+        clearAuthToken();
+        localStorage.removeItem(AUTH_TOKEN_STORAGE_KEY);
+        localStorage.removeItem(AUTH_USER_STORAGE_KEY);
+        setToken(null);
+        setUser(null);
+      } finally {
+        if (isMounted) {
+          setIsAuthLoading(false);
+        }
+      }
+    };
+
+    bootAuth();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [token]);
+
+  const login = async ({ student_id, password }) => {
+    try {
+      const response = await loginUser({ student_id, password });
+      const authToken = response?.data?.data?.token;
+      const loggedInUser = response?.data?.data?.user;
+
+      if (!authToken || !loggedInUser) {
+        throw new Error('Invalid auth response');
+      }
+
+      setAuthToken(authToken);
+      localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, authToken);
+      localStorage.setItem(AUTH_USER_STORAGE_KEY, JSON.stringify(loggedInUser));
+
+      setToken(authToken);
+      setUser(loggedInUser);
+
+      return loggedInUser;
+    } catch (error) {
+      throw getApiError(error, 'Login failed');
+    }
+  };
+
+  const register = async ({ name, email, student_id, password }) => {
+    try {
+      await registerUser({ name, email, student_id, password });
+    } catch (error) {
+      throw getApiError(error, 'Registration failed');
+    }
+  };
+
   const logout = () => {
-    localStorage.removeItem('campusvibe_user');
-    setIsLoggedIn(false);
+    clearAuthToken();
+    localStorage.removeItem(AUTH_TOKEN_STORAGE_KEY);
+    localStorage.removeItem(AUTH_USER_STORAGE_KEY);
+    setToken(null);
     setUser(null);
   };
 
   return (
-    <AuthContext.Provider value={{ isLoggedIn, user, login, logout }}>
+    <AuthContext.Provider value={{ isLoggedIn, isAuthLoading, token, user, login, register, logout }}>
       {children}
     </AuthContext.Provider>
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useAuth = () => useContext(AuthContext);

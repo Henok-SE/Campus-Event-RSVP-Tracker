@@ -8,6 +8,7 @@ import EventDetails from './pages/EventDetails';
 import ProfileSettings from './pages/ProfileSettings';
 import MySchedule from './pages/MySchedule';
 import CreateEvent from './pages/CreateEvent';
+import ProtectedRoute from './components/auth/ProtectedRoute';
 
 function App() {
   return (
@@ -19,12 +20,40 @@ function App() {
         </Route>
 
         <Route path="/login" element={<Login />} />
-        <Route path="/dashboard" element={<Dashboard />} />
+        <Route
+          path="/dashboard"
+          element={(
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          )}
+        />
         {/* <Route path="/event/:id" element={<EventDetails />} /> */}
-        <Route path="/profile-settings" element={<ProfileSettings />} />
+        <Route
+          path="/profile-settings"
+          element={(
+            <ProtectedRoute>
+              <ProfileSettings />
+            </ProtectedRoute>
+          )}
+        />
         <Route path="/event/:id" element={<EventDetails />} />
-        <Route path="/my-schedule" element={<MySchedule />} />
-        <Route path="/create-event" element={<CreateEvent />} />
+        <Route
+          path="/my-schedule"
+          element={(
+            <ProtectedRoute>
+              <MySchedule />
+            </ProtectedRoute>
+          )}
+        />
+        <Route
+          path="/create-event"
+          element={(
+            <ProtectedRoute>
+              <CreateEvent />
+            </ProtectedRoute>
+          )}
+        />
       </Routes>
     </Router>
   );
