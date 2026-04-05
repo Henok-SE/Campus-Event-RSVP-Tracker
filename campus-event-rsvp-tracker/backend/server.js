@@ -80,8 +80,10 @@ app.use((err, req, res, next) => {
 });
 
 const connectDB = async () => {
+  const mongoUri = process.env.MONGODB_URI || config.mongoUri;
+
   try {
-    await mongoose.connect(config.mongoUri);
+    await mongoose.connect(mongoUri);
     console.log("Database connected");
 
     try {
