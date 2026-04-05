@@ -1,110 +1,316 @@
 // src/pages/Dashboard.jsx
 import { useState, useEffect, useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import DashboardNavbar from '../components/common/DashboardNavbar';
 import Footer from '../components/common/Footer';
 import { useDebounce } from '../hooks/useDebounce';
+import { useAuth } from '../context/AuthContext';
+import { getEvents, getMyRSVPs, rsvpEvent, cancelRsvp, getApiError } from '../services/api';
 
-const featuredEvents = [
-  {
-    id: 3,
-    title: "Intramural Basketball Finals",
-    desc: "Championship game between the Thunderbolts and the Pioneers. Bring your spirit!",
-    location: "Recreation Center",
-    attending: 256,
-    capacity: 300,
-    countdown: "00 : 56 : 10",
-    tags: ["Sports"],
-    image: "https://picsum.photos/id/1018/2000/1200",
-    category: "Sports",
-    rsvpStatus: "available"
-  },
-  {
-    id: 1,
-    title: "Spring Music Festival",
-    desc: "Live performances from campus bands and special guest DJs...",
-    location: "Main Quad",
-    attending: 342,
-    capacity: 500,
-    countdown: "09 : 27 : 15",
-    tags: ["Arts", "Free Food"],
-    image: "https://picsum.photos/id/201/2000/1200",
-    category: "Arts",
-    rsvpStatus: "rsvpd"
+const DEFAULT_CATEGORIES = ['Sports', 'Arts', 'Academic', 'Social', 'Free Food', 'Tech'];
+
+const pad2 = (value) => String(value).padStart(2, '0');
+
+const getCountdown = (eventDate) => {
+  if (!eventDate) {
+    return '-- : -- : --';
   }
-];
 
-const bottomEventsInitial = [
-  { id:4, title:"Pizza & Philosophy", tags:["Free Food"], desc:"This week's topic...", location:"Library Lounge", attending:28, capacity:40, starts:"2h 55m", seatsLeft:12, category:"Social", rsvpStatus:"available" },
-  { id:5, title:"Resume Workshop", tags:["Academic"], desc:"Get your resume reviewed...", location:"Career Center", attending:31, capacity:50, starts:"7h 55m", seatsLeft:19, category:"Academic", rsvpStatus:"available" },
-  { id:6, title:"Sunset Yoga on the Lawn", tags:["Social"], desc:"Unwind with a guided yoga...", location:"West Lawn", attending:45, capacity:60, starts:"3h 55m", seatsLeft:15, category:"Social", rsvpStatus:"available" },
-  { id:7, title:"Open Mic Night", tags:["Arts"], desc:"Share your poetry, comedy, or music...", location:"Student Center Stage", attending:52, capacity:80, starts:"5h 55m", seatsLeft:28, category:"Arts", rsvpStatus:"available" },
-  { id:8, title:"AI & Ethics Panel Discussion", tags:["Academic"], desc:"Faculty and industry experts discuss...", location:"Auditorium B", attending:134, capacity:200, starts:"11h 55m", seatsLeft:66, category:"Academic", rsvpStatus:"available" },
-  { id:9, title:"Taco Tuesday Social", tags:["Free Food"], desc:"All-you-can-eat tacos and mocktails...", location:"Dining Hall Patio", attending:76, capacity:100, starts:"6h 55m", seatsLeft:24, category:"Social", rsvpStatus:"available" },
-];
+  const target = new Date(eventDate).getTime();
+  if (Number.isNaN(target)) {
+    return '-- : -- : --';
+  }
+
+  const diff = target - Date.now();
+  if (diff <= 0) {
+    return '00 : 00 : 00';
+  }
+
+  const totalSeconds = Math.floor(diff / 1000);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+
+  return `${pad2(hours)} : ${pad2(minutes)} : ${pad2(seconds)}`;
+};
+
+const getStartsIn = (eventDate) => {
+  if (!eventDate) {
+    return 'TBA';
+  }
+
+  const target = new Date(eventDate).getTime();
+  if (Number.isNaN(target)) {
+    return 'TBA';
+  }
+
+  const diff = target - Date.now();
+  if (diff <= 0) {
+    return 'Started';
+  }
+
+  const totalMinutes = Math.floor(diff / 60000);
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+
+  if (hours >= 24) {
+    const days = Math.floor(hours / 24);
+    const remHours = hours % 24;
+    return `${days}d ${remHours}h`;
+  }
+
+  return `${hours}h ${minutes}m`;
+};
+
+const normalizeTags = (tags, category) => {
+  if (Array.isArray(tags) && tags.length > 0) {
+    return tags.filter(Boolean);
+  }
+
+  if (category) {
+    return [category];
+  }
+
+  return ['General'];
+};
+
+const mapApiEvent = (event, rsvpSet) => {
+  const id = event._id || event.id;
+  const tags = normalizeTags(event.tags, event.category);
+  const category = event.category || tags[0] || 'General';
+  const attending = Number.isInteger(event.attending)
+    ? event.attending
+    : Number(event.attending_count || 0);
+  const capacity = Number.isInteger(event.capacity)
+    ? event.capacity
+    : Number(event.capacity || 0);
+  const starts = getStartsIn(event.event_date);
+  const seatsLeft = capacity > 0 ? Math.max(0, capacity - attending) : null;
+
+  return {
+    id,
+    title: event.title || 'Untitled event',
+    desc: event.description || 'No description available yet.',
+    location: event.location || 'Location to be announced',
+    attending,
+    capacity,
+    countdown: getCountdown(event.event_date),
+    tags,
+    image: event.image_url || `https://picsum.photos/seed/${id}/2000/1200`,
+    category,
+    starts,
+    seatsLeft,
+    rsvpStatus: rsvpSet.has(String(id)) ? 'rsvpd' : 'available'
+  };
+};
 
 export default function Dashboard() {
+  const navigate = useNavigate();
+  const { isLoggedIn } = useAuth();
+
   const [currentSlide, setCurrentSlide] = useState(0);
   const [rsvpCount, setRsvpCount] = useState(0);
   const [mySchedule, setMySchedule] = useState([]);
-  const [events, setEvents] = useState(bottomEventsInitial);
+  const [events, setEvents] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [pendingEventId, setPendingEventId] = useState(null);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [activeCategory, setActiveCategory] = useState('All Events');
 
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
 
+  const featuredEvents = useMemo(() => {
+    if (events.length === 0) {
+      return [];
+    }
+
+    const withImages = events.filter((event) => Boolean(event.image));
+    const source = withImages.length > 0 ? withImages : events;
+    return source.slice(0, 2);
+  }, [events]);
+
+  const featured = featuredEvents[currentSlide] || null;
+
+  const categories = useMemo(() => {
+    const dynamicCategories = events
+      .flatMap((event) => [event.category, ...(event.tags || [])])
+      .filter(Boolean);
+
+    return ['All Events', ...new Set([...dynamicCategories, ...DEFAULT_CATEGORIES])];
+  }, [events]);
+
+  const applyLocalRsvpChange = (eventId, nextStatus) => {
+    setEvents((prev) => prev.map((event) => {
+      if (event.id !== eventId) {
+        return event;
+      }
+
+      const delta = nextStatus === 'rsvpd' ? 1 : -1;
+      const nextAttending = Math.max(0, (event.attending || 0) + delta);
+
+      return {
+        ...event,
+        rsvpStatus: nextStatus,
+        attending: nextAttending,
+        seatsLeft: event.capacity > 0 ? Math.max(0, event.capacity - nextAttending) : null
+      };
+    }));
+
+    setMySchedule((prev) => {
+      if (nextStatus === 'rsvpd') {
+        return [...new Set([...prev, eventId])];
+      }
+
+      return prev.filter((id) => id !== eventId);
+    });
+
+    setRsvpCount((prev) => {
+      if (nextStatus === 'rsvpd') {
+        return prev + 1;
+      }
+
+      return Math.max(0, prev - 1);
+    });
+  };
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadDashboardData = async () => {
+      setLoading(true);
+      setErrorMessage('');
+
+      try {
+        const eventsResponse = await getEvents();
+        const apiEvents = Array.isArray(eventsResponse?.data?.data)
+          ? eventsResponse.data.data
+          : [];
+
+        let rsvpSet = new Set();
+
+        if (isLoggedIn) {
+          const myRsvpsResponse = await getMyRSVPs();
+          const myRsvps = Array.isArray(myRsvpsResponse?.data?.data)
+            ? myRsvpsResponse.data.data
+            : [];
+
+          rsvpSet = new Set(
+            myRsvps
+              .map((record) => record?.event?._id)
+              .filter(Boolean)
+              .map(String)
+          );
+        }
+
+        const mappedEvents = apiEvents.map((event) => mapApiEvent(event, rsvpSet));
+        const scheduleIds = mappedEvents
+          .filter((event) => event.rsvpStatus === 'rsvpd')
+          .map((event) => event.id);
+
+        if (!isMounted) {
+          return;
+        }
+
+        setEvents(mappedEvents);
+        setMySchedule(scheduleIds);
+        setRsvpCount(scheduleIds.length);
+        setCurrentSlide(0);
+      } catch (error) {
+        if (!isMounted) {
+          return;
+        }
+
+        const apiError = getApiError(error, 'Failed to load events');
+        setErrorMessage(apiError.message);
+        setEvents([]);
+        setMySchedule([]);
+        setRsvpCount(0);
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    loadDashboardData();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isLoggedIn]);
+
   // Handle RSVP or Cancel RSVP
-  const handleRSVPAction = (eventId) => {
-    const eventIndex = events.findIndex(e => e.id === eventId);
-    if (eventIndex === -1) return;
+  const handleRSVPAction = async (eventId) => {
+    const currentEvent = events.find((event) => event.id === eventId);
 
-    const currentEvent = events[eventIndex];
+    if (!currentEvent || pendingEventId) {
+      return;
+    }
 
-    if (currentEvent.rsvpStatus === "rsvpd") {
-      // Cancel RSVP
-      setRsvpCount(prev => Math.max(0, prev - 1));
-      setMySchedule(prev => prev.filter(id => id !== eventId));
+    if (!isLoggedIn) {
+      navigate('/login?redirect=/dashboard');
+      return;
+    }
 
-      setEvents(prev => prev.map((ev, idx) => 
-        idx === eventIndex ? { ...ev, rsvpStatus: "available" } : ev
-      ));
-    } else if (currentEvent.rsvpStatus === "available") {
-      // RSVP
-      setRsvpCount(prev => prev + 1);
-      setMySchedule(prev => [...new Set([...prev, eventId])]);
+    const nextStatus = currentEvent.rsvpStatus === 'rsvpd' ? 'available' : 'rsvpd';
 
-      setEvents(prev => prev.map((ev, idx) => 
-        idx === eventIndex ? { ...ev, rsvpStatus: "rsvpd" } : ev
-      ));
+    setErrorMessage('');
+    setPendingEventId(eventId);
+
+    // Optimistic update to keep UI responsive while request is in-flight.
+    applyLocalRsvpChange(eventId, nextStatus);
+
+    try {
+      if (nextStatus === 'rsvpd') {
+        await rsvpEvent(eventId);
+      } else {
+        await cancelRsvp(eventId);
+      }
+    } catch (error) {
+      const apiError = getApiError(error, 'Failed to update RSVP');
+      setErrorMessage(apiError.message);
+
+      // Roll back optimistic change on failure.
+      applyLocalRsvpChange(eventId, currentEvent.rsvpStatus);
+    } finally {
+      setPendingEventId(null);
     }
   };
 
   useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentSlide(prev => (prev + 1) % featuredEvents.length);
-    }, 5000);
-    return () => clearInterval(timer);
-  }, []);
+    if (featuredEvents.length <= 1) {
+      return undefined;
+    }
 
-  const featured = featuredEvents[currentSlide];
+    const timer = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % featuredEvents.length);
+    }, 5000);
+
+    return () => clearInterval(timer);
+  }, [featuredEvents]);
+
+  useEffect(() => {
+    if (currentSlide >= featuredEvents.length) {
+      setCurrentSlide(0);
+    }
+  }, [currentSlide, featuredEvents.length]);
 
   const filteredEvents = useMemo(() => {
     const term = debouncedSearchTerm.toLowerCase().trim();
-    return events.filter(event => {
+    return events.filter((event) => {
       const matchesSearch = !term || 
-        event.title.toLowerCase().includes(term) ||
-        event.desc.toLowerCase().includes(term) ||
-        event.location.toLowerCase().includes(term) ||
-        event.tags.some(tag => tag.toLowerCase().includes(term));
+        (event.title || '').toLowerCase().includes(term) ||
+        (event.desc || '').toLowerCase().includes(term) ||
+        (event.location || '').toLowerCase().includes(term) ||
+        (event.tags || []).some((tag) => String(tag).toLowerCase().includes(term));
 
       const matchesCategory = activeCategory === 'All Events' || event.category === activeCategory;
 
       return matchesSearch && matchesCategory;
     });
   }, [events, debouncedSearchTerm, activeCategory]);
-
-  const categories = ["All Events", "Sports", "Arts", "Academic", "Social", "Free Food", "Tech"];
 
   return (
     <>
@@ -113,33 +319,39 @@ export default function Dashboard() {
       <div className="bg-white text-slate-900 min-h-screen">
         {/* Featured Hero */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-8">
-          <div 
-            className="bg-[#1E3A8A] text-white rounded-3xl overflow-hidden relative shadow-lg"
-            style={{ backgroundImage: `url('${featured.image}')`, backgroundSize: 'cover' }}
-          >
-            <div className="absolute inset-0 bg-gradient-to-b from-black/40 to-black/70" />
-            <div className="relative z-10 p-6 sm:p-10 md:p-12">
-              <div className="flex flex-wrap gap-3 mb-5">
-                {featured.tags.map((tag, idx) => (
-                  <span key={`${tag}-${idx}`} className="bg-white/20 px-4 py-1 rounded-full text-sm font-medium">
-                    {tag}
-                  </span>
-                ))}
-              </div>
-              <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold leading-tight mb-4">{featured.title}</h1>
-              <p className="text-base sm:text-lg md:text-xl mb-6 max-w-3xl">{featured.desc}</p>
-              <div className="flex flex-wrap gap-6 text-sm mb-8">
-                <div>📍 {featured.location}</div>
-                <div>👥 {featured.attending}/{featured.capacity} attending</div>
-              </div>
-              <div className="flex flex-col sm:flex-row gap-5">
-                <div className="font-mono text-4xl sm:text-5xl font-bold tabular-nums">{featured.countdown}</div>
-                <Link to={`/event/${featured.id}`} className="bg-white text-[#1E3A8A] px-8 py-4 rounded-2xl font-semibold hover:bg-slate-100 transition-all">
-                  View Details
-                </Link>
+          {featured ? (
+            <div 
+              className="bg-[#1E3A8A] text-white rounded-3xl overflow-hidden relative shadow-lg"
+              style={{ backgroundImage: `url('${featured.image}')`, backgroundSize: 'cover' }}
+            >
+              <div className="absolute inset-0 bg-linear-to-b from-black/40 to-black/70" />
+              <div className="relative z-10 p-6 sm:p-10 md:p-12">
+                <div className="flex flex-wrap gap-3 mb-5">
+                  {featured.tags.map((tag, idx) => (
+                    <span key={`${tag}-${idx}`} className="bg-white/20 px-4 py-1 rounded-full text-sm font-medium">
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+                <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold leading-tight mb-4">{featured.title}</h1>
+                <p className="text-base sm:text-lg md:text-xl mb-6 max-w-3xl">{featured.desc}</p>
+                <div className="flex flex-wrap gap-6 text-sm mb-8">
+                  <div>📍 {featured.location}</div>
+                  <div>👥 {featured.attending}{featured.capacity > 0 ? `/${featured.capacity}` : ''} attending</div>
+                </div>
+                <div className="flex flex-col sm:flex-row gap-5">
+                  <div className="font-mono text-4xl sm:text-5xl font-bold tabular-nums">{featured.countdown}</div>
+                  <Link to={`/event/${featured.id}`} className="bg-white text-[#1E3A8A] px-8 py-4 rounded-2xl font-semibold hover:bg-slate-100 transition-all">
+                    View Details
+                  </Link>
+                </div>
               </div>
             </div>
-          </div>
+          ) : (
+            <div className="bg-slate-100 text-slate-500 rounded-3xl p-12 text-center">
+              No featured events yet.
+            </div>
+          )}
         </div>
 
         {/* Search + Categories */}
@@ -171,7 +383,17 @@ export default function Dashboard() {
         {/* Events Grid + My Schedule */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 pb-20 grid lg:grid-cols-4 gap-8">
           <div className="lg:col-span-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredEvents.length === 0 ? (
+            {errorMessage ? (
+              <div className="col-span-full rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-700">
+                {errorMessage}
+              </div>
+            ) : null}
+
+            {loading ? (
+              <div className="col-span-full text-center py-12 text-slate-500">
+                Loading events...
+              </div>
+            ) : filteredEvents.length === 0 ? (
               <div className="col-span-full text-center py-12 text-slate-500">
                 No events found matching your search.
               </div>
@@ -196,7 +418,7 @@ export default function Dashboard() {
 
                     <div className="flex justify-between text-xs text-slate-500 mb-6">
                       <div>📍 {event.location}</div>
-                      <div>👥 {event.attending}/{event.capacity}</div>
+                      <div>👥 {event.attending}{event.capacity > 0 ? `/${event.capacity}` : ''}</div>
                     </div>
 
                     <div className="text-xs text-slate-500 mb-6">⏳ Starts in {event.starts}</div>
