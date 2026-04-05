@@ -4,18 +4,57 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const User = require("../models/users");
 const Student = require("../models/student");
+const AuthAudit = require("../models/authAudit");
 const { sendSuccess, sendError } = require("../utils/apiResponse");
+const { getConfig } = require("../config/env");
+const { normalizeStudentId, isValidStudentId } = require("../utils/studentId");
 
-const STUDENT_ID_PATTERN = /^(STU|ADM)-\d+$/i;
+const { jwtSecret } = getConfig();
 
-const normalizeStudentId = (value = "") => value.trim().toUpperCase();
 const normalizeEmail = (value = "") => value.trim().toLowerCase();
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const isCompleteRosterStudent = (student) => {
+  if (!student) {
+    return false;
+  }
+
+  const normalizedStudentId = normalizeStudentId(student.student_id);
+  const normalizedEmail = normalizeEmail(student.email || "");
+  const normalizedName = String(student.name || "").trim();
+
+  return (
+    isValidStudentId(normalizedStudentId) &&
+    EMAIL_PATTERN.test(normalizedEmail) &&
+    Boolean(normalizedName)
+  );
+};
+
+const auditAuthAttempt = async ({ action, studentId, success, reason = null }) => {
+  try {
+    await AuthAudit.create({
+      action,
+      student_id: normalizeStudentId(studentId || ""),
+      success,
+      reason
+    });
+  } catch (error) {
+    console.error(`Auth audit write failed (${action}):`, error.message);
+  }
+};
 
 exports.register = async (req, res) => {
   try {
     const { name, email, student_id, password } = req.body;
 
     if (!student_id || !password) {
+      await auditAuthAttempt({
+        action: "REGISTER",
+        studentId: student_id,
+        success: false,
+        reason: "MISSING_REQUIRED_FIELDS"
+      });
+
       return sendError(res, {
         status: 400,
         code: "VALIDATION_ERROR",
@@ -25,17 +64,31 @@ exports.register = async (req, res) => {
 
     const normalizedStudentId = normalizeStudentId(student_id);
 
-    if (!STUDENT_ID_PATTERN.test(normalizedStudentId)) {
+    if (!isValidStudentId(normalizedStudentId)) {
+      await auditAuthAttempt({
+        action: "REGISTER",
+        studentId: normalizedStudentId,
+        success: false,
+        reason: "INVALID_STUDENT_ID_FORMAT"
+      });
+
       return sendError(res, {
         status: 400,
         code: "VALIDATION_ERROR",
-        message: "student_id format is invalid"
+        message: "student_id format is invalid. Use 1234/18 format"
       });
     }
 
     const rosterStudent = await Student.findOne({ student_id: normalizedStudentId });
 
     if (!rosterStudent) {
+      await auditAuthAttempt({
+        action: "REGISTER",
+        studentId: normalizedStudentId,
+        success: false,
+        reason: "STUDENT_NOT_IN_ROSTER"
+      });
+
       return sendError(res, {
         status: 403,
         code: "REGISTRATION_FORBIDDEN",
@@ -43,7 +96,29 @@ exports.register = async (req, res) => {
       });
     }
 
+    if (!isCompleteRosterStudent(rosterStudent)) {
+      await auditAuthAttempt({
+        action: "REGISTER",
+        studentId: normalizedStudentId,
+        success: false,
+        reason: "INCOMPLETE_ROSTER_RECORD"
+      });
+
+      return sendError(res, {
+        status: 403,
+        code: "REGISTRATION_FORBIDDEN",
+        message: "student roster record is incomplete"
+      });
+    }
+
     if (email && normalizeEmail(email) !== rosterStudent.email) {
+      await auditAuthAttempt({
+        action: "REGISTER",
+        studentId: normalizedStudentId,
+        success: false,
+        reason: "EMAIL_MISMATCH"
+      });
+
       return sendError(res, {
         status: 400,
         code: "VALIDATION_ERROR",
@@ -52,6 +127,13 @@ exports.register = async (req, res) => {
     }
 
     if (name && name.trim() !== rosterStudent.name) {
+      await auditAuthAttempt({
+        action: "REGISTER",
+        studentId: normalizedStudentId,
+        success: false,
+        reason: "NAME_MISMATCH"
+      });
+
       return sendError(res, {
         status: 400,
         code: "VALIDATION_ERROR",
@@ -67,6 +149,13 @@ exports.register = async (req, res) => {
     });
 
     if (userExists) {
+      await auditAuthAttempt({
+        action: "REGISTER",
+        studentId: normalizedStudentId,
+        success: false,
+        reason: "USER_ALREADY_EXISTS"
+      });
+
       return sendError(res, {
         status: 409,
         code: "DUPLICATE_ENTRY",
@@ -84,6 +173,13 @@ exports.register = async (req, res) => {
     });
 
     await user.save();
+
+    await auditAuthAttempt({
+      action: "REGISTER",
+      studentId: normalizedStudentId,
+      success: true,
+      reason: "REGISTER_SUCCESS"
+    });
 
     return sendSuccess(res, {
       status: 201,
@@ -103,6 +199,13 @@ exports.register = async (req, res) => {
       const fieldFromValue = !fieldFromPattern && error.keyValue ? Object.keys(error.keyValue)[0] : undefined;
       const field = fieldFromPattern || fieldFromValue || "field";
 
+      await auditAuthAttempt({
+        action: "REGISTER",
+        studentId: req.body?.student_id,
+        success: false,
+        reason: "DUPLICATE_ENTRY"
+      });
+
       return sendError(res, {
         status: 409,
         code: "DUPLICATE_ENTRY",
@@ -110,6 +213,14 @@ exports.register = async (req, res) => {
         details: { field }
       });
     }
+
+    await auditAuthAttempt({
+      action: "REGISTER",
+      studentId: req.body?.student_id,
+      success: false,
+      reason: "REGISTER_FAILED"
+    });
+
     return sendError(res, {
       status: 500,
       code: "REGISTER_FAILED",
@@ -123,6 +234,13 @@ exports.login = async (req, res) => {
     const { student_id, password } = req.body;
 
     if (!student_id || !password) {
+      await auditAuthAttempt({
+        action: "LOGIN",
+        studentId: student_id,
+        success: false,
+        reason: "MISSING_REQUIRED_FIELDS"
+      });
+
       return sendError(res, {
         status: 400,
         code: "VALIDATION_ERROR",
@@ -132,17 +250,31 @@ exports.login = async (req, res) => {
 
     const normalizedStudentId = normalizeStudentId(student_id);
 
-    if (!STUDENT_ID_PATTERN.test(normalizedStudentId)) {
+    if (!isValidStudentId(normalizedStudentId)) {
+      await auditAuthAttempt({
+        action: "LOGIN",
+        studentId: normalizedStudentId,
+        success: false,
+        reason: "INVALID_STUDENT_ID_FORMAT"
+      });
+
       return sendError(res, {
         status: 400,
         code: "VALIDATION_ERROR",
-        message: "student_id format is invalid"
+        message: "student_id format is invalid. Use 1234/18 format"
       });
     }
 
     const user = await User.findOne({ student_id: normalizedStudentId });
 
     if (!user) {
+      await auditAuthAttempt({
+        action: "LOGIN",
+        studentId: normalizedStudentId,
+        success: false,
+        reason: "USER_NOT_FOUND"
+      });
+
       return sendError(res, {
         status: 404,
         code: "USER_NOT_FOUND",
@@ -153,6 +285,13 @@ exports.login = async (req, res) => {
     const isMatch = await bcrypt.compare(password, user.password);
 
     if (!isMatch) {
+      await auditAuthAttempt({
+        action: "LOGIN",
+        studentId: normalizedStudentId,
+        success: false,
+        reason: "INVALID_PASSWORD"
+      });
+
       return sendError(res, {
         status: 401,
         code: "INVALID_CREDENTIALS",
@@ -160,19 +299,18 @@ exports.login = async (req, res) => {
       });
     }
 
-    if (!process.env.JWT_SECRET) {
-      return sendError(res, {
-        status: 500,
-        code: "CONFIGURATION_ERROR",
-        message: "JWT_SECRET is not configured"
-      });
-    }
-
     const token = jwt.sign(
       { id: user._id, role: user.role },
-      process.env.JWT_SECRET,
+      jwtSecret,
       { expiresIn: "1d" }
     );
+
+    await auditAuthAttempt({
+      action: "LOGIN",
+      studentId: normalizedStudentId,
+      success: true,
+      reason: "LOGIN_SUCCESS"
+    });
 
     return sendSuccess(res, {
       status: 200,
@@ -190,6 +328,13 @@ exports.login = async (req, res) => {
     });
 
   } catch (error) {
+    await auditAuthAttempt({
+      action: "LOGIN",
+      studentId: req.body?.student_id,
+      success: false,
+      reason: "LOGIN_FAILED"
+    });
+
     return sendError(res, {
       status: 500,
       code: "LOGIN_FAILED",

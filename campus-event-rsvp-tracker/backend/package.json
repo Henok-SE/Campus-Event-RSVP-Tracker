@@ -6,10 +6,12 @@
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
+    "check:env": "node scripts/checkEnv.js",
     "test": "jest --runInBand",
     "test:integration": "jest --runInBand tests/integration.api.test.js",
     "db:seed": "node scripts/seed.js",
     "db:init": "node scripts/seed.js",
+    "db:check:students": "node scripts/checkStudentRoster.js",
     "db:import:students": "node scripts/importStudents.js"
   },
   "keywords": [],

@@ -3,6 +3,9 @@ import { useAuth } from '../context/AuthContext';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useEffect, useMemo, useState } from 'react';
 
+const STUDENT_ID_PATTERN = /^\d{4}\/\d{2}$/;
+const normalizeStudentId = (value = '') => value.trim().replace(/\s+/g, '');
+
 export default function Login() {
   const { isAuthLoading, isLoggedIn, login, register } = useAuth();
   const navigate = useNavigate();
@@ -39,6 +42,14 @@ export default function Login() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    const normalizedStudentId = normalizeStudentId(formData.student_id);
+
+    if (!STUDENT_ID_PATTERN.test(normalizedStudentId)) {
+      setErrorMessage('Student ID must use 1234/18 format');
+      setSuccessMessage('');
+      return;
+    }
+
     setLoading(true);
     setErrorMessage('');
     setSuccessMessage('');
@@ -48,7 +59,7 @@ export default function Login() {
         await register({
           name: formData.name.trim() || undefined,
           email: formData.email.trim() || undefined,
-          student_id: formData.student_id.trim(),
+          student_id: normalizedStudentId,
           password: formData.password
         });
 
@@ -56,7 +67,7 @@ export default function Login() {
         setMode('login');
       } else {
         await login({
-          student_id: formData.student_id.trim(),
+          student_id: normalizedStudentId,
           password: formData.password
         });
 
@@ -101,96 +112,99 @@ export default function Login() {
                     className={`flex-1 py-3 rounded-xl font-medium transition-all ${
                       mode === 'register' ? 'bg-white shadow text-slate-900' : 'text-slate-500'
                     }`}
-                  >
+                    >
                     Create Account
-                  </button>
-                </div>
+                    </button>
+                  </div>
 
-                <h2 className="text-2xl font-semibold text-center mb-8">
-                  {mode === 'register' ? 'Create Account' : 'Welcome Back'}
-                </h2>
+                  <h2 className="text-2xl font-semibold text-center mb-8">
+                    {mode === 'register' ? 'Create Account' : 'Welcome Back'}
+                  </h2>
 
-                {errorMessage ? (
-                  <div className="mb-5 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                  {errorMessage ? (
+                    <div className="mb-5 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
                     {errorMessage}
-                  </div>
-                ) : null}
-
-                {successMessage ? (
-                  <div className="mb-5 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-                    {successMessage}
-                  </div>
-                ) : null}
-
-                <form onSubmit={handleSubmit} className="space-y-6">
-                  {mode === 'register' ? (
-                    <>
-                      <div>
-                        <label className="block text-sm font-medium mb-2">Full Name (optional)</label>
-                        <input
-                          type="text"
-                          name="name"
-                          value={formData.name}
-                          onChange={handleChange}
-                          className="w-full px-5 py-4 border border-slate-300 rounded-2xl focus:outline-none focus:border-blue-600"
-                          placeholder="John Student"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium mb-2">Email (optional)</label>
-                        <input
-                          type="email"
-                          name="email"
-                          value={formData.email}
-                          onChange={handleChange}
-                          className="w-full px-5 py-4 border border-slate-300 rounded-2xl focus:outline-none focus:border-blue-600"
-                          placeholder="john.student@campus.edu"
-                        />
-                      </div>
-                    </>
+                    </div>
                   ) : null}
 
-          <div>
-            <label className="block text-sm font-medium mb-2">Student ID</label>
+                  {successMessage ? (
+                    <div className="mb-5 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+                    {successMessage}
+                    </div>
+                  ) : null}
+
+                  <form onSubmit={handleSubmit} className="space-y-6">
+                    {mode === 'register' ? (
+                    <>
+                      <div>
+                      <label className="block text-sm font-medium mb-2">Full Name (optional)</label>
+                      <input
+                        type="text"
+                        name="name"
+                        value={formData.name}
+                        onChange={handleChange}
+                        className="w-full px-5 py-4 border border-slate-300 rounded-2xl focus:outline-none focus:border-blue-600"
+                        placeholder="John Student"
+                      />
+                      </div>
+
+                      <div>
+                      <label className="block text-sm font-medium mb-2">Email (optional)</label>
+                      <input
+                        type="email"
+                        name="email"
+                        value={formData.email}
+                        onChange={handleChange}
+                        className="w-full px-5 py-4 border border-slate-300 rounded-2xl focus:outline-none focus:border-blue-600"
+                        placeholder="john.student@campus.edu"
+                      />
+                      </div>
+                    </>
+                    ) : null}
+
+                    <div>
+                    <label className="block text-sm font-medium mb-2">Student ID</label>
                     <input
                       type="text"
-              name="student_id"
-              value={formData.student_id}
-              onChange={handleChange}
+                      name="student_id"
+                      value={formData.student_id}
+                      onChange={handleChange}
                       className="w-full px-5 py-4 border border-slate-300 rounded-2xl focus:outline-none focus:border-blue-600"
-                      placeholder="STU-1001"
+                      placeholder="1234/18"
+                      pattern="\d{4}/\d{2}"
+                      title="Use 1234/18 format"
                       required
-            />
-          </div>
+                    />
+                    <p className="mt-2 text-xs text-slate-500">Use format 1234/18</p>
+                    </div>
 
-          <div>
-            <label className="block text-sm font-medium mb-2">Password</label>
+                    <div>
+                    <label className="block text-sm font-medium mb-2">Password</label>
                     <input
                       type="password"
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
+                      name="password"
+                      value={formData.password}
+                      onChange={handleChange}
                       className="w-full px-5 py-4 border border-slate-300 rounded-2xl focus:outline-none focus:border-blue-600"
-                      placeholder="Password123!"
+                      placeholder="..."
                       required
-            />
-          </div>
+                    />
+                    </div>
 
-                  <button
+                    <button
                     type="submit"
                     disabled={loading}
                     className="mt-2 w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white py-5 rounded-2xl font-semibold text-lg transition-all"
-                  >
+                    >
                     {loading
                       ? (mode === 'register' ? 'Creating Account...' : 'Signing In...')
                       : (mode === 'register' ? 'Create Account' : 'Sign In')}
-                  </button>
-                </form>
+                    </button>
+                  </form>
 
-        <p className="text-center mt-8 text-sm text-slate-600">
-                  {mode === 'register' ? 'Already have an account?' : 'Need an account?'}{' '}
-                  <button
+                  <p className="text-center mt-8 text-sm text-slate-600">
+                    {mode === 'register' ? 'Already have an account?' : 'Need an account?'}{' '}
+                    <button
                     type="button"
                     onClick={() => {
                       setMode((prev) => (prev === 'register' ? 'login' : 'register'));

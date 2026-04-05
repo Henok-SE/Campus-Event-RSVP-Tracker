@@ -12,6 +12,7 @@ const Student = require("../models/student");
 const User = require("../models/users");
 const Event = require("../models/event");
 const RSVP = require("../models/rsvp");
+const AuthAudit = require("../models/authAudit");
 const { app, connectDB } = require("../server");
 
 let mongoServer;
@@ -28,6 +29,7 @@ describe("Backend integration tests", () => {
     await Event.deleteMany({});
     await User.deleteMany({});
     await Student.deleteMany({});
+    await AuthAudit.deleteMany({});
   });
 
   afterAll(async () => {
@@ -39,7 +41,7 @@ describe("Backend integration tests", () => {
 
   test("register + login + me flow works", async () => {
     await Student.create({
-      student_id: "STU-010",
+      student_id: "3001/18",
       name: "Jane Doe",
       email: "jane@example.com"
     });
@@ -47,7 +49,7 @@ describe("Backend integration tests", () => {
     const registerRes = await request(app).post("/api/auth/register").send({
       name: "Jane Doe",
       email: "jane@example.com",
-      student_id: "STU-010",
+      student_id: "3001/18",
       password: "pass1234"
     });
 
@@ -55,7 +57,7 @@ describe("Backend integration tests", () => {
     expect(registerRes.body.success).toBe(true);
 
     const loginRes = await request(app).post("/api/auth/login").send({
-      student_id: "STU-010",
+      student_id: "3001/18",
       password: "pass1234"
     });
 
@@ -69,7 +71,25 @@ describe("Backend integration tests", () => {
 
     expect(meRes.status).toBe(200);
     expect(meRes.body.success).toBe(true);
-    expect(meRes.body.data.student_id).toBe("STU-010");
+    expect(meRes.body.data.student_id).toBe("3001/18");
+
+    const auditCount = await AuthAudit.countDocuments({ student_id: "3001/18", success: true });
+    expect(auditCount).toBe(2);
+  });
+
+  test("register rejects invalid student_id format", async () => {
+    const registerRes = await request(app).post("/api/auth/register").send({
+      student_id: "STU-010",
+      password: "pass1234"
+    });
+
+    expect(registerRes.status).toBe(400);
+    expect(registerRes.body.error.message).toBe("student_id format is invalid. Use 1234/18 format");
+
+    const audit = await AuthAudit.findOne({ action: "REGISTER", student_id: "STU-010" });
+    expect(audit).not.toBeNull();
+    expect(audit.success).toBe(false);
+    expect(audit.reason).toBe("INVALID_STUDENT_ID_FORMAT");
   });
 
   test("RSVP capacity allows only one user when one seat remains", async () => {
@@ -78,7 +98,7 @@ describe("Backend integration tests", () => {
     const user1 = await User.create({
       name: "User One",
       email: "one@example.com",
-      student_id: "STU-101",
+      student_id: "3101/18",
       password: hashed,
       role: "Student"
     });
@@ -86,7 +106,7 @@ describe("Backend integration tests", () => {
     const user2 = await User.create({
       name: "User Two",
       email: "two@example.com",
-      student_id: "STU-102",
+      student_id: "3102/18",
       password: hashed,
       role: "Student"
     });
@@ -129,7 +149,7 @@ describe("Backend integration tests", () => {
     const owner = await User.create({
       name: "Owner",
       email: "owner@example.com",
-      student_id: "STU-201",
+      student_id: "3201/18",
       password: hashed,
       role: "Student"
     });
@@ -137,7 +157,7 @@ describe("Backend integration tests", () => {
     const attendee = await User.create({
       name: "Attendee",
       email: "attendee@example.com",
-      student_id: "STU-202",
+      student_id: "3202/18",
       password: hashed,
       role: "Student"
     });

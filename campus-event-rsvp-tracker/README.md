@@ -117,6 +117,18 @@ JWT_SECRET=dev-jwt-secret-change-me
 Reference template:
 `backend/.env.example`
 
+Initialize backend env from template:
+
+```bash
+cp backend/.env.example backend/.env
+```
+
+Validate backend environment before running dev server:
+
+```bash
+npm --prefix backend run check:env
+```
+
 ## Run the Project
 From project root:
 
@@ -164,8 +176,12 @@ npm --prefix backend run db:import:students -- backend/data/source_docs/students
 ```
 
 Expected parsed row format inside PDF text:
-1. `STU-1001, John Student, john.student@campus.edu`
-2. `John Student, STU-1001, john.student@campus.edu`
+1. `2001/18, John Student, john.student@campus.edu`
+2. `John Student, 2001/18, john.student@campus.edu`
+
+Student ID format policy:
+1. Registration and login require `student_id` in `1234/18` format.
+2. Registration is allowed only when that exact `student_id` exists in Student roster data.
 
 Import output summary includes:
 1. Rows parsed
@@ -175,17 +191,18 @@ Import output summary includes:
 5. Invalid rows
 
 Seeded test accounts:
-1. `ADM-0001` / `Password123!` (Admin)
-2. `ADM-0002` / `Password123!` (Admin)
-3. `ADM-0003` / `Password123!` (Admin)
-4. `ADM-0004` / `Password123!` (Admin)
-5. `ADM-0005` / `Password123!` (Admin)
-6. `STU-1001` / `Password123!` (Student)
-7. `STU-1002` / `Password123!` (Student)
+1. `1001/18` / `Password123!` (Admin)
+2. `1002/18` / `Password123!` (Admin)
+3. `1003/18` / `Password123!` (Admin)
+4. `1004/18` / `Password123!` (Admin)
+5. `1005/18` / `Password123!` (Admin)
+6. `2001/18` / `Password123!` (Student)
+7. `2002/18` / `Password123!` (Student)
 
 Authentication note:
 1. Login uses `student_id + password`.
 2. Registration is allowed only when `student_id` exists in the Student roster.
+3. Register/login attempts are minimally tracked (`action`, `student_id`, `success`, `reason`, `created_at`).
 
 Seed profile summary:
 1. 7 total users
@@ -203,10 +220,12 @@ Root scripts:
 Backend scripts:
 1. `npm --prefix backend run dev`
 2. `npm --prefix backend run start`
-3. `npm --prefix backend run test`
-4. `npm --prefix backend run db:init`
-5. `npm --prefix backend run db:seed`
-6. `npm --prefix backend run db:import:students -- backend/data/source_docs/students.pdf`
+3. `npm --prefix backend run check:env`
+4. `npm --prefix backend run test`
+5. `npm --prefix backend run db:init`
+6. `npm --prefix backend run db:seed`
+7. `npm --prefix backend run db:check:students`
+8. `npm --prefix backend run db:import:students -- backend/data/source_docs/students.pdf`
 
 ## Current API Surface (Backend)
 Base URL: `/api`

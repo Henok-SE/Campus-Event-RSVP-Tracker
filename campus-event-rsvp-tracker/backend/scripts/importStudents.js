@@ -5,12 +5,11 @@ const path = require("path");
 const mongoose = require("mongoose");
 const pdfParse = require("pdf-parse");
 const Student = require("../models/student");
+const { normalizeStudentId, isValidStudentId } = require("../utils/studentId");
 
 const MONGO_URI = process.env.MONGODB_URI || "mongodb://127.0.0.1:27017/eventDB";
-const STUDENT_ID_PATTERN = /^(STU|ADM)-\d+$/i;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-const normalizeStudentId = (value = "") => value.trim().toUpperCase();
 const normalizeEmail = (value = "") => value.trim().toLowerCase();
 const normalizeName = (value = "") => value.trim().replace(/\s+/g, " ");
 
@@ -23,7 +22,7 @@ const parseStudentLine = (line) => {
     return null;
   }
 
-  const byIdNameEmail = trimmed.match(/^((?:STU|ADM)-\d+)\s*[,|\t]\s*(.+?)\s*[,|\t]\s*([^,|\t\s]+@[^,|\t\s]+)$/i);
+  const byIdNameEmail = trimmed.match(/^(\d{4}\s*\/\s*\d{2})\s*[,|\t]\s*(.+?)\s*[,|\t]\s*([^,|\t\s]+@[^,|\t\s]+)$/i);
   if (byIdNameEmail) {
     return {
       student_id: normalizeStudentId(byIdNameEmail[1]),
@@ -32,7 +31,7 @@ const parseStudentLine = (line) => {
     };
   }
 
-  const byNameIdEmail = trimmed.match(/^(.+?)\s*[,|\t]\s*((?:STU|ADM)-\d+)\s*[,|\t]\s*([^,|\t\s]+@[^,|\t\s]+)$/i);
+  const byNameIdEmail = trimmed.match(/^(.+?)\s*[,|\t]\s*(\d{4}\s*\/\s*\d{2})\s*[,|\t]\s*([^,|\t\s]+@[^,|\t\s]+)$/i);
   if (byNameIdEmail) {
     return {
       student_id: normalizeStudentId(byNameIdEmail[2]),
@@ -70,7 +69,7 @@ const isValidStudent = (student) => {
   }
 
   return (
-    STUDENT_ID_PATTERN.test(student.student_id) &&
+    isValidStudentId(student.student_id) &&
     EMAIL_PATTERN.test(student.email) &&
     Boolean(student.name)
   );
