@@ -58,10 +58,15 @@ jest.mock("../models/rsvp", () => {
   return RSVP;
 });
 
+jest.mock("../models/authAudit", () => ({
+  create: jest.fn().mockResolvedValue(undefined)
+}));
+
 const User = require("../models/users");
 const Student = require("../models/student");
 const Event = require("../models/event");
 const RSVP = require("../models/rsvp");
+const AuthAudit = require("../models/authAudit");
 const { app } = require("../server");
 
 describe("Backend API smoke tests", () => {
@@ -80,7 +85,7 @@ describe("Backend API smoke tests", () => {
 
   test("POST /api/auth/register returns 201", async () => {
     Student.findOne.mockResolvedValue({
-      student_id: "STU-001",
+      student_id: "1234/18",
       name: "Jane",
       email: "jane@example.com"
     });
@@ -93,26 +98,81 @@ describe("Backend API smoke tests", () => {
     const res = await request(app).post("/api/auth/register").send({
       name: "Jane",
       email: "jane@example.com",
-      student_id: "STU-001",
+      student_id: "1234/18",
       password: "pass1234"
     });
 
     expect(res.status).toBe(201);
     expect(res.body.message).toBe("User registered successfully");
-    expect(Student.findOne).toHaveBeenCalledWith({ student_id: "STU-001" });
+    expect(Student.findOne).toHaveBeenCalledWith({ student_id: "1234/18" });
     expect(hashSpy).toHaveBeenCalled();
+    expect(AuthAudit.create).toHaveBeenCalledWith({
+      action: "REGISTER",
+      student_id: "1234/18",
+      success: true,
+      reason: "REGISTER_SUCCESS"
+    });
+  });
+
+  test("POST /api/auth/register ignores submitted name/email mismatches", async () => {
+    Student.findOne.mockResolvedValue({
+      student_id: "1234/18",
+      name: "Official Name",
+      email: "official@campus.edu"
+    });
+    User.findOne.mockResolvedValue(null);
+    User.prototype.save = jest.fn().mockResolvedValue(undefined);
+    jest.spyOn(bcrypt, "hash").mockResolvedValue("hashed-password");
+
+    const res = await request(app).post("/api/auth/register").send({
+      name: "Different Name",
+      email: "different@campus.edu",
+      student_id: "1234/18",
+      password: "pass1234"
+    });
+
+    expect(res.status).toBe(201);
+    expect(res.body.success).toBe(true);
+    expect(AuthAudit.create).toHaveBeenCalledWith({
+      action: "REGISTER",
+      student_id: "1234/18",
+      success: true,
+      reason: "REGISTER_SUCCESS"
+    });
+  });
+
+  test("POST /api/auth/register rejects invalid student id format", async () => {
+    const res = await request(app).post("/api/auth/register").send({
+      student_id: "STU-001",
+      password: "pass1234"
+    });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.message).toBe("student_id format is invalid. Use 1234/18 format");
+    expect(AuthAudit.create).toHaveBeenCalledWith({
+      action: "REGISTER",
+      student_id: "STU-001",
+      success: false,
+      reason: "INVALID_STUDENT_ID_FORMAT"
+    });
   });
 
   test("POST /api/auth/register rejects unknown student id", async () => {
     Student.findOne.mockResolvedValue(null);
 
     const res = await request(app).post("/api/auth/register").send({
-      student_id: "STU-999",
+      student_id: "9999/99",
       password: "pass1234"
     });
 
     expect(res.status).toBe(403);
     expect(res.body.error.message).toBe("student_id is not authorized for registration");
+    expect(AuthAudit.create).toHaveBeenCalledWith({
+      action: "REGISTER",
+      student_id: "9999/99",
+      success: false,
+      reason: "STUDENT_NOT_IN_ROSTER"
+    });
   });
 
   test("POST /api/auth/login returns token", async () => {
@@ -120,7 +180,7 @@ describe("Backend API smoke tests", () => {
       _id: "507f1f77bcf86cd799439011",
       name: "Jane",
       email: "jane@example.com",
-      student_id: "STU-001",
+      student_id: "1234/18",
       role: "Student",
       password: "hashed-password"
     });
@@ -128,13 +188,19 @@ describe("Backend API smoke tests", () => {
     const compareSpy = jest.spyOn(bcrypt, "compare").mockResolvedValue(true);
 
     const res = await request(app).post("/api/auth/login").send({
-      student_id: "STU-001",
+      student_id: "1234/18",
       password: "pass1234"
     });
 
     expect(res.status).toBe(200);
     expect(res.body.data.token).toBeDefined();
     expect(compareSpy).toHaveBeenCalled();
+    expect(AuthAudit.create).toHaveBeenCalledWith({
+      action: "LOGIN",
+      student_id: "1234/18",
+      success: true,
+      reason: "LOGIN_SUCCESS"
+    });
   });
 
   test("GET /api/auth/me returns current user", async () => {
@@ -144,7 +210,7 @@ describe("Backend API smoke tests", () => {
         _id: "507f1f77bcf86cd799439011",
         name: "Jane",
         email: "jane@example.com",
-        student_id: "STU-001",
+        student_id: "1234/18",
         role: "Student"
       })
     });
@@ -155,7 +221,7 @@ describe("Backend API smoke tests", () => {
 
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
-    expect(res.body.data.student_id).toBe("STU-001");
+    expect(res.body.data.student_id).toBe("1234/18");
   });
 
   test("GET /api/auth/protected requires valid token", async () => {

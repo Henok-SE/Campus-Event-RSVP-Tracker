@@ -1,5 +1,8 @@
 const jwt = require("jsonwebtoken");
 const { sendError } = require("../utils/apiResponse");
+const { getConfig } = require("../config/env");
+
+const { jwtSecret } = getConfig();
 
 const authMiddleware = (req, res, next) => {
     const authHeader = req.headers.authorization;
@@ -12,20 +15,12 @@ const authMiddleware = (req, res, next) => {
         });
     }
 
-    if (!process.env.JWT_SECRET) {
-        return sendError(res, {
-            status: 500,
-            code: "CONFIGURATION_ERROR",
-            message: "JWT_SECRET is not configured"
-        });
-    }
-
     try {
         const token = authHeader.startsWith("Bearer ")
             ? authHeader.split(" ")[1]
             : authHeader;
 
-        const verified = jwt.verify(token, process.env.JWT_SECRET);
+        const verified = jwt.verify(token, jwtSecret);
 
         req.user = verified;
 

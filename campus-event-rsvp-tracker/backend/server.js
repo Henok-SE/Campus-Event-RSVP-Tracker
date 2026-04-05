@@ -1,26 +1,20 @@
-require("dotenv").config();
-
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
 const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
 const { sendError, sendSuccess } = require("./utils/apiResponse");
+const { getConfig } = require("./config/env");
+const Student = require("./models/student");
 
 const authRoutes = require("./routes/authRoutes");
 const eventRoutes = require("./routes/eventRoutes");
 const rsvpRoutes = require("./routes/rsvpRoutes");
 
 const app = express();
+const config = getConfig();
 
-if (!process.env.JWT_SECRET) {
-  throw new Error("JWT_SECRET is required");
-}
-
-const allowedOrigins = (process.env.FRONTEND_ORIGINS || "http://localhost:5173")
-  .split(",")
-  .map((origin) => origin.trim())
-  .filter(Boolean);
+const allowedOrigins = config.frontendOrigins;
 
 app.use(cors({
   origin: (origin, callback) => {
@@ -84,18 +78,27 @@ app.use((err, req, res, next) => {
 });
 
 const connectDB = async () => {
-  const mongoUri = process.env.MONGODB_URI || "mongodb://127.0.0.1:27017/eventDB";
-
   try {
-    await mongoose.connect(mongoUri);
+    await mongoose.connect(config.mongoUri);
     console.log("Database connected");
+
+    try {
+      const studentCount = await Student.countDocuments();
+      if (studentCount === 0) {
+        console.warn(
+          "Student roster is empty. Run: npm --prefix backend run db:import:students:finalized:replace"
+        );
+      }
+    } catch (warnErr) {
+      console.warn(`Student roster check skipped: ${warnErr.message}`);
+    }
   } catch (err) {
     console.error("MongoDB connection error:", err.message);
     process.exit(1);
   }
 };
 
-const PORT = process.env.PORT || 5000;
+const PORT = config.port;
 
 if (require.main === module) {
   connectDB().then(() => {

@@ -8,6 +8,7 @@ const Student = require("../models/student");
 const Event = require("../models/event");
 const RSVP = require("../models/rsvp");
 const Attendance = require("../models/attendance");
+const AuthAudit = require("../models/authAudit");
 
 const MONGO_URI = process.env.MONGODB_URI || "mongodb://127.0.0.1:27017/eventDB";
 
@@ -20,7 +21,8 @@ const seed = async () => {
     User.syncIndexes(),
     Event.syncIndexes(),
     RSVP.syncIndexes(),
-    Attendance.syncIndexes()
+    Attendance.syncIndexes(),
+    AuthAudit.syncIndexes()
   ]);
 
   const defaultPassword = await bcrypt.hash("Password123!", 10);
@@ -29,44 +31,44 @@ const seed = async () => {
     {
       name: "Genene",
       email: "genene@campus.edu",
-      student_id: "ADM-0001",
+      student_id: "1001/18",
       role: "Admin"
     },
     {
       name: "Henok",
       email: "henok@campus.edu",
-      student_id: "ADM-0002",
+      student_id: "1002/18",
       role: "Admin"
     },
     {
       name: "Maya",
       email: "maya@campus.edu",
-      student_id: "ADM-0003",
+      student_id: "1003/18",
       role: "Admin"
     },
     {
         name: "Bedriya",
         email: "bedriya@campus.edu",
-        student_id: "ADM-0004",
+        student_id: "1004/18",
         role: "Admin"
     },
     {
         name: "Hana",
         email: "hana@campus.edu",
-        student_id: "ADM-0005",
+        student_id: "1005/18",
         role: "Admin"
 
     },
     {
         name: "John Student",
         email: "john.student@campus.edu",
-        student_id: "STU-1001",
+        student_id: "2001/18",
         role: "Student"
     },
     {
         name: "Sara Student",
         email: "sara.student@campus.edu",
-        student_id: "STU-1002",
+        student_id: "2002/18",
         role: "Student"
     }
   ];
@@ -148,13 +150,13 @@ const seed = async () => {
     {
       user_id: usersByEmail["john.student@campus.edu"]._id,
       event_id: eventsByTitle["Spring Hackathon 2026"]._id,
-      qr_code: "QR-STU1001-HACK2026",
+      qr_code: "QR-2001-18-HACK2026",
       status: "Confirmed"
     },
     {
       user_id: usersByEmail["sara.student@campus.edu"]._id,
       event_id: eventsByTitle["Campus Music Fest"]._id,
-      qr_code: "QR-STU1002-MUSIC2026",
+      qr_code: "QR-2002-18-MUSIC2026",
       status: "Confirmed"
     }
   ];

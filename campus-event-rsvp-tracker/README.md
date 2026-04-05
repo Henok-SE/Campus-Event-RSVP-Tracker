@@ -109,13 +109,25 @@ Backend environment file:
 Required variables:
 
 ```env
-PORT=5000
+PORT=5050
 MONGODB_URI=mongodb://127.0.0.1:27017/eventDB
 JWT_SECRET=dev-jwt-secret-change-me
 ```
 
 Reference template:
 `backend/.env.example`
+
+Initialize backend env from template:
+
+```bash
+cp backend/.env.example backend/.env
+```
+
+Validate backend environment before running dev server:
+
+```bash
+npm --prefix backend run check:env
+```
 
 ## Run the Project
 From project root:
@@ -130,7 +142,7 @@ npm run dev:frontend
 
 Default URLs:
 1. Frontend: `http://localhost:5173`
-2. Backend health: `http://localhost:5000/api/health`
+2. Backend health: `http://localhost:5050/api/health`
 
 ## Database Initialization and Seed Data
 The backend includes an idempotent seed script.
@@ -156,16 +168,27 @@ Security policy:
 
 Default file name:
 1. `backend/data/source_docs/students.pdf`
+2. `backend/data/Finalized Members 1 - Sheet1.pdf` (current canonical roster)
 
 Import command:
 
 ```bash
-npm --prefix backend run db:import:students -- backend/data/source_docs/students.pdf
+npm --prefix backend run db:import:students -- data/source_docs/students.pdf
+```
+
+Strict replace import command (recommended):
+
+```bash
+npm --prefix backend run db:import:students:finalized:replace
 ```
 
 Expected parsed row format inside PDF text:
-1. `STU-1001, John Student, john.student@campus.edu`
-2. `John Student, STU-1001, john.student@campus.edu`
+1. `2001/18, John Student, john.student@campus.edu`
+2. `John Student, 2001/18, john.student@campus.edu`
+
+Student ID format policy:
+1. Registration and login require `student_id` in `1234/18` format.
+2. Registration is allowed only when that exact `student_id` exists in Student roster data.
 
 Import output summary includes:
 1. Rows parsed
@@ -175,17 +198,19 @@ Import output summary includes:
 5. Invalid rows
 
 Seeded test accounts:
-1. `ADM-0001` / `Password123!` (Admin)
-2. `ADM-0002` / `Password123!` (Admin)
-3. `ADM-0003` / `Password123!` (Admin)
-4. `ADM-0004` / `Password123!` (Admin)
-5. `ADM-0005` / `Password123!` (Admin)
-6. `STU-1001` / `Password123!` (Student)
-7. `STU-1002` / `Password123!` (Student)
+1. `1001/18` / `Password123!` (Admin)
+2. `1002/18` / `Password123!` (Admin)
+3. `1003/18` / `Password123!` (Admin)
+4. `1004/18` / `Password123!` (Admin)
+5. `1005/18` / `Password123!` (Admin)
+6. `2001/18` / `Password123!` (Student)
+7. `2002/18` / `Password123!` (Student)
 
 Authentication note:
 1. Login uses `student_id + password`.
 2. Registration is allowed only when `student_id` exists in the Student roster.
+3. Registration decision is based on `student_id` existence only.
+3. Register/login attempts are minimally tracked (`action`, `student_id`, `success`, `reason`, `created_at`).
 
 Seed profile summary:
 1. 7 total users
@@ -203,10 +228,15 @@ Root scripts:
 Backend scripts:
 1. `npm --prefix backend run dev`
 2. `npm --prefix backend run start`
-3. `npm --prefix backend run test`
-4. `npm --prefix backend run db:init`
-5. `npm --prefix backend run db:seed`
-6. `npm --prefix backend run db:import:students -- backend/data/source_docs/students.pdf`
+3. `npm --prefix backend run check:env`
+4. `npm --prefix backend run test`
+5. `npm --prefix backend run db:init`
+6. `npm --prefix backend run db:seed`
+7. `npm --prefix backend run db:check:students`
+8. `npm --prefix backend run db:import:students -- data/source_docs/students.pdf`
+9. `npm --prefix backend run db:import:students:replace`
+10. `npm --prefix backend run db:import:students:finalized:replace`
+11. `npm --prefix backend run db:import:students:finalized:dry-run`
 
 ## Current API Surface (Backend)
 Base URL: `/api`
@@ -217,7 +247,7 @@ Auth routes:
 3. `GET /auth/protected`
 
 Auth payloads:
-1. Register request body: `student_id`, `password` (optional `name` and `email` are validated against roster when provided)
+1. Register request body: `student_id`, `password` (optional `name` and `email` are ignored for allow/deny decision)
 2. Login request body: `student_id`, `password`
 
 Event routes:
