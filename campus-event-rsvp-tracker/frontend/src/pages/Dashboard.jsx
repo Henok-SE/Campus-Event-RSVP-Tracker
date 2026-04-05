@@ -210,14 +210,15 @@ export default function Dashboard() {
                       </Link>
 
                       <button
-                        onClick={() => handleRSVPAction(event.id)}
+                        onClick={() => event.rsvpStatus !== "rsvpd" && handleRSVPAction(event.id)}
+                        disabled={event.rsvpStatus === "rsvpd"}
                         className={`flex-1 py-3.5 rounded-2xl font-medium text-sm transition-all ${
                           event.rsvpStatus === "rsvpd" 
-                            ? "bg-green-600 hover:bg-red-600 text-white" 
+                            ? "bg-slate-100 text-slate-500 cursor-not-allowed" 
                             : "bg-blue-600 hover:bg-blue-700 text-white"
                         }`}
                       >
-                        {event.rsvpStatus === "rsvpd" ? "Cancel RSVP" : "Count Me In"}
+                        {event.rsvpStatus === "rsvpd" ? "RSVP'd" : "Count Me In"}
                       </button>
                     </div>
                   </div>
@@ -242,9 +243,18 @@ export default function Dashboard() {
                 {mySchedule.map(id => {
                   const ev = events.find(e => e.id === id);
                   return ev ? (
-                    <div key={id} className="border-b pb-3 last:border-b-0 last:pb-0">
-                      <p className="font-medium">{ev.title}</p>
-                      <p className="text-slate-500">{ev.location} • {ev.starts}</p>
+                    <div key={id} className="border-b pb-3 last:border-b-0 last:pb-0 flex items-center justify-between group">
+                      <div>
+                        <p className="font-medium">{ev.title}</p>
+                        <p className="text-slate-500">{ev.location} • {ev.starts}</p>
+                      </div>
+                      <button 
+                        onClick={() => handleRSVPAction(ev.id)} 
+                        className="opacity-0 group-hover:opacity-100 p-2 text-slate-400 hover:text-red-500 transition-all rounded-full hover:bg-red-50"
+                        title="Cancel RSVP"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                      </button>
                     </div>
                   ) : null;
                 })}

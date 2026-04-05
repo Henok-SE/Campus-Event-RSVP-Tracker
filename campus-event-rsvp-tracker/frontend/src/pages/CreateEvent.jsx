@@ -3,10 +3,12 @@ import { useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Footer from '../components/common/Footer';
 import { X, Image as ImageIcon } from 'lucide-react';
+import { useToast } from '../context/ToastContext';
 
 export default function CreateEvent() {
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
+  const toast = useToast();
 
   const [formData, setFormData] = useState({
     title: '',
@@ -36,12 +38,12 @@ export default function CreateEvent() {
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
-      alert("Please upload an image file (JPG, PNG, etc.)");
+      toast.error("Please upload an image file (JPG, PNG, etc.)");
       return;
     }
 
     if (file.size > 5 * 1024 * 1024) { // 5MB limit
-      alert("Image size must be less than 5MB");
+      toast.error("Image size must be less than 5MB");
       return;
     }
 
@@ -64,7 +66,7 @@ export default function CreateEvent() {
 
     // Mock API call - later replace with Axios + FormData for image upload
     setTimeout(() => {
-      alert("Event created successfully! 🎉\n\nYour event has been submitted for review.");
+      toast.success("Event created successfully! 🎉\nYour event has been submitted for review.");
       navigate('/dashboard');
       setLoading(false);
     }, 1500);

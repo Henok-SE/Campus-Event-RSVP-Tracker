@@ -114,7 +114,11 @@ export default function Landing() {
               <Link to="/login" className="text-blue-600 font-medium">View all events →</Link>
             </div>
             <div className="grid md:grid-cols-3 gap-8">
-              {upcoming.map(event => <EventCard key={event.id} event={event} />)}
+              {upcoming.map(event => (
+                <Link key={event.id} to={`/event/${event.id}`} className="block">
+                  <EventCard event={event} />
+                </Link>
+              ))}
             </div>
           </div>
         </div>

@@ -1,0 +1,13 @@
+
+> campus-event-rsvp-tracker-frontend@0.0.0 build
+> vite build
+
+[36mvite v7.3.1 [32mbuilding client environment for production...[36m[39m
+transforming...
+[32m✓[39m 1822 modules transformed.
+rendering chunks...
+computing gzip size...
+[2mdist/[22m[32mindex.html                 [39m[1m[2m  0.49 kB[22m[1m[22m[2m │ gzip:   0.31 kB[22m
+[2mdist/[22m[35massets/index-D6ZHKn8O.css  [39m[1m[2m 31.30 kB[22m[1m[22m[2m │ gzip:   6.30 kB[22m
+[2mdist/[22m[36massets/index-CXmfdbFy.js   [39m[1m[2m320.88 kB[22m[1m[22m[2m │ gzip: 101.44 kB[22m
+[32m✓ built in 3.75s[39m

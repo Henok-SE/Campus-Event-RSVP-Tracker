@@ -1,8 +1,8 @@
 // src/components/common/DashboardNavbar.jsx
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { LogOut, User, Calendar, Settings, HelpCircle, Bell } from 'lucide-react';
+import { LogOut, Calendar, Settings, HelpCircle, Bell, Menu, X } from 'lucide-react';
 
 export default function DashboardNavbar({ rsvpCount }) {
   const { user, logout } = useAuth();
@@ -10,8 +10,24 @@ export default function DashboardNavbar({ rsvpCount }) {
   
   const [profileOpen, setProfileOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showHelpModal, setShowHelpModal] = useState(false);
+
+  const navRef = useRef(null);
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (navRef.current && !navRef.current.contains(event.target)) {
+        setProfileOpen(false);
+        setNotificationsOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   // Mock notifications (later connect to real backend)
   const [notifications, setNotifications] = useState([
@@ -67,14 +83,17 @@ export default function DashboardNavbar({ rsvpCount }) {
           <span className="text-2xl font-semibold tracking-tight">CampusVibe</span>
         </div>
 
-        <div className="flex items-center gap-8">
-          <Link to="/dashboard" className="font-medium text-slate-700 hover:text-slate-900">Events</Link>
-          <div className="font-medium text-slate-700">{rsvpCount} RSVP'd</div>
+        <div className="flex items-center gap-4 md:gap-8" ref={navRef}>
+          <Link to="/dashboard" className="hidden md:block font-medium text-slate-700 hover:text-slate-900">Events</Link>
+          <div className="hidden md:block font-medium text-slate-700">{rsvpCount} RSVP'd</div>
 
           {/* Notifications Bell */}
           <div className="relative">
             <button 
-              onClick={() => setNotificationsOpen(!notificationsOpen)}
+              onClick={() => {
+                setNotificationsOpen(!notificationsOpen);
+                if (!notificationsOpen) setProfileOpen(false);
+              }}
               className="relative p-2 text-slate-600 hover:text-slate-900 transition-colors"
             >
               <Bell className="w-6 h-6" />
@@ -117,7 +136,10 @@ export default function DashboardNavbar({ rsvpCount }) {
           {/* Profile Dropdown */}
           <div className="relative">
             <button
-              onClick={() => setProfileOpen(!profileOpen)}
+              onClick={() => {
+                setProfileOpen(!profileOpen);
+                if (!profileOpen) setNotificationsOpen(false);
+              }}
               className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white font-semibold hover:bg-blue-700 transition-colors"
             >
               {user?.name?.charAt(0) || 'H'}
@@ -158,8 +180,24 @@ export default function DashboardNavbar({ rsvpCount }) {
               </div>
             )}
           </div>
+
+          {/* Mobile Overlay Menu Toggle */}
+          <button 
+            className="md:hidden p-2 text-slate-600 hover:text-slate-900"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          >
+            {mobileMenuOpen ? <X className="w-7 h-7" /> : <Menu className="w-7 h-7" />}
+          </button>
         </div>
       </div>
+
+      {/* Mobile Menu Dropdown contents */}
+      {mobileMenuOpen && (
+        <div className="md:hidden absolute top-full left-0 w-full bg-white border-b shadow-xl px-6 py-6 flex flex-col gap-5 z-10 animate-in slide-in-from-top-2">
+          <Link to="/dashboard" onClick={() => setMobileMenuOpen(false)} className="text-lg font-medium hover:text-blue-600">Events Feed</Link>
+          <div className="text-lg font-medium text-slate-500">You have {rsvpCount} active RSVPs</div>
+        </div>
+      )}
 
       {/* Modals */}
       {showSettingsModal && (

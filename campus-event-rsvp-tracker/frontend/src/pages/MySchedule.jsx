@@ -3,8 +3,10 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Footer from '../components/common/Footer';
 import { Calendar, MapPin, Users, X } from 'lucide-react';
+import { useToast } from '../context/ToastContext';
 
 export default function MySchedule() {
+  const toast = useToast();
   const [myEvents, setMyEvents] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -53,7 +55,7 @@ export default function MySchedule() {
 
   const handleCancelRSVP = (eventId) => {
     setMyEvents(prev => prev.filter(ev => ev.id !== eventId));
-    alert(`RSVP cancelled for this event.`);
+    toast.success(`RSVP cancelled for this event.`);
   };
 
   if (loading) {

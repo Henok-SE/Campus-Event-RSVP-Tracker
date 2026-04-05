@@ -1,9 +1,11 @@
 // src/pages/ProfileSettings.jsx
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 import { useState } from 'react';
 
 export default function ProfileSettings() {
   const { user } = useAuth();
+  const toast = useToast();
   const [formData, setFormData] = useState({
     name: user?.name || '',
     student_id: user?.student_id || '',
@@ -15,7 +17,7 @@ export default function ProfileSettings() {
   };
 
   const handleSave = () => {
-    alert("Profile updated! (mock save)");
+    toast.success("Profile updated! (mock save)");
     // In real app → call API to update user
   };
 

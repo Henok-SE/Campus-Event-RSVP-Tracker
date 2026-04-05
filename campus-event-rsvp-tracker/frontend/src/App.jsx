@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import MainLayout from './components/layout/MainLayout';
 import Landing from './pages/Landing';
+import About from './pages/About';
 import Events from './pages/Events';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
@@ -8,14 +9,18 @@ import EventDetails from './pages/EventDetails';
 import ProfileSettings from './pages/ProfileSettings';
 import MySchedule from './pages/MySchedule';
 import CreateEvent from './pages/CreateEvent';
+import NotFound from './pages/NotFound';
 import ProtectedRoute from './components/auth/ProtectedRoute';
+import { ToastProvider } from './context/ToastContext';
 
 function App() {
   return (
-    <Router>
+    <ToastProvider>
+      <Router>
       <Routes>
         <Route element={<MainLayout />}>
           <Route path="/" element={<Landing />} />
+          <Route path="/about" element={<About />} />
           <Route path="/events" element={<Events />} />
         </Route>
 
@@ -54,8 +59,10 @@ function App() {
             </ProtectedRoute>
           )}
         />
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </Router>
+    </ToastProvider>
   );
 }
 

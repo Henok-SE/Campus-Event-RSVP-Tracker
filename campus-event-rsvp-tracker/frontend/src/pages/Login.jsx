@@ -1,19 +1,23 @@
 // src/pages/Login.jsx
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useEffect, useMemo, useState } from 'react';
+import { Eye, EyeOff } from 'lucide-react';
 
 const STUDENT_ID_PATTERN = /^\d{4}\/\d{2}$/;
 const normalizeStudentId = (value = '') => value.trim().replace(/\s+/g, '');
 
 export default function Login() {
   const { isAuthLoading, isLoggedIn, login, register } = useAuth();
+  const toast = useToast();
   const navigate = useNavigate();
   const location = useLocation();
   const [mode, setMode] = useState('login');
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   const redirectTarget = useMemo(() => {
     const params = new URLSearchParams(location.search);
@@ -57,8 +61,8 @@ export default function Login() {
     try {
       if (mode === 'register') {
         await register({
-          name: formData.name.trim() || undefined,
-          email: formData.email.trim() || undefined,
+          name: formData.name.trim(),
+          email: formData.email.trim(),
           student_id: normalizedStudentId,
           password: formData.password
         });
@@ -133,11 +137,11 @@ export default function Login() {
                     </div>
                   ) : null}
 
-                  <form onSubmit={handleSubmit} className="space-y-6">
+                  <form onSubmit={handleSubmit} className="space-y-6" autoComplete="off">
                     {mode === 'register' ? (
                     <>
                       <div>
-                      <label className="block text-sm font-medium mb-2">Full Name (optional)</label>
+                      <label className="block text-sm font-medium mb-2">Full Name</label>
                       <input
                         type="text"
                         name="name"
@@ -145,11 +149,12 @@ export default function Login() {
                         onChange={handleChange}
                         className="w-full px-5 py-4 border border-slate-300 rounded-2xl focus:outline-none focus:border-blue-600"
                         placeholder="John Student"
+                        required
                       />
                       </div>
 
                       <div>
-                      <label className="block text-sm font-medium mb-2">Email (optional)</label>
+                      <label className="block text-sm font-medium mb-2">Email</label>
                       <input
                         type="email"
                         name="email"
@@ -157,6 +162,7 @@ export default function Login() {
                         onChange={handleChange}
                         className="w-full px-5 py-4 border border-slate-300 rounded-2xl focus:outline-none focus:border-blue-600"
                         placeholder="john.student@campus.edu"
+                        required
                       />
                       </div>
                     </>
@@ -175,20 +181,40 @@ export default function Login() {
                       title="Use 1234/18 format"
                       required
                     />
-                    <p className="mt-2 text-xs text-slate-500">Use format 1234/18</p>
                     </div>
 
                     <div>
-                    <label className="block text-sm font-medium mb-2">Password</label>
-                    <input
-                      type="password"
-                      name="password"
-                      value={formData.password}
-                      onChange={handleChange}
-                      className="w-full px-5 py-4 border border-slate-300 rounded-2xl focus:outline-none focus:border-blue-600"
-                      placeholder="..."
-                      required
-                    />
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-sm font-medium">Password</label>
+                      {mode === 'login' && (
+                        <button 
+                          type="button" 
+                          onClick={() => toast.success("Please check your student email for a reset link.")}
+                          className="text-sm font-medium text-blue-600 hover:underline"
+                        >
+                          Forgot password?
+                        </button>
+                      )}
+                    </div>
+                    <div className="relative">
+                      <input
+                        type={showPassword ? "text" : "password"}
+                        name="password"
+                        value={formData.password}
+                        onChange={handleChange}
+                        className="w-full px-5 py-4 border border-slate-300 rounded-2xl focus:outline-none focus:border-blue-600 pr-12"
+                        placeholder="..."
+                        autoComplete="new-password"
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                      >
+                        {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                      </button>
+                    </div>
                     </div>
 
                     <button

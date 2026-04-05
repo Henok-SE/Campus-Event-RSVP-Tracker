@@ -14,11 +14,9 @@ export default function EventCard({ event }) {
         <h3 className="font-semibold text-xl mb-1">{event.title}</h3>
         <p className="text-slate-500 text-sm mb-6">📍 {event.location} • {event.date}</p>
         
-        <button className="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-2xl font-semibold transition-all">
-          <Link to="/login">
-            Join Event
-          </Link>
-        </button>
+        <div className="w-full text-center bg-blue-600 group-hover:bg-blue-700 text-white py-4 rounded-2xl font-semibold transition-all">
+          Join Event
+        </div>
       </div>
     </div>
   );
