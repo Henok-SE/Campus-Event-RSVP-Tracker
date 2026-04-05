@@ -5,6 +5,7 @@ const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
 const { sendError, sendSuccess } = require("./utils/apiResponse");
 const { getConfig } = require("./config/env");
+const Student = require("./models/student");
 
 const authRoutes = require("./routes/authRoutes");
 const eventRoutes = require("./routes/eventRoutes");
@@ -80,6 +81,17 @@ const connectDB = async () => {
   try {
     await mongoose.connect(config.mongoUri);
     console.log("Database connected");
+
+    try {
+      const studentCount = await Student.countDocuments();
+      if (studentCount === 0) {
+        console.warn(
+          "Student roster is empty. Run: npm --prefix backend run db:import:students:finalized:replace"
+        );
+      }
+    } catch (warnErr) {
+      console.warn(`Student roster check skipped: ${warnErr.message}`);
+    }
   } catch (err) {
     console.error("MongoDB connection error:", err.message);
     process.exit(1);

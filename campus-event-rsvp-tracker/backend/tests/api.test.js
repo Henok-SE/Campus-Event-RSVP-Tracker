@@ -114,6 +114,33 @@ describe("Backend API smoke tests", () => {
     });
   });
 
+  test("POST /api/auth/register ignores submitted name/email mismatches", async () => {
+    Student.findOne.mockResolvedValue({
+      student_id: "1234/18",
+      name: "Official Name",
+      email: "official@campus.edu"
+    });
+    User.findOne.mockResolvedValue(null);
+    User.prototype.save = jest.fn().mockResolvedValue(undefined);
+    jest.spyOn(bcrypt, "hash").mockResolvedValue("hashed-password");
+
+    const res = await request(app).post("/api/auth/register").send({
+      name: "Different Name",
+      email: "different@campus.edu",
+      student_id: "1234/18",
+      password: "pass1234"
+    });
+
+    expect(res.status).toBe(201);
+    expect(res.body.success).toBe(true);
+    expect(AuthAudit.create).toHaveBeenCalledWith({
+      action: "REGISTER",
+      student_id: "1234/18",
+      success: true,
+      reason: "REGISTER_SUCCESS"
+    });
+  });
+
   test("POST /api/auth/register rejects invalid student id format", async () => {
     const res = await request(app).post("/api/auth/register").send({
       student_id: "STU-001",

@@ -77,6 +77,24 @@ describe("Backend integration tests", () => {
     expect(auditCount).toBe(2);
   });
 
+  test("register uses ID-only roster gate", async () => {
+    await Student.create({
+      student_id: "3002/18",
+      name: "Official Name",
+      email: "official@campus.edu"
+    });
+
+    const registerRes = await request(app).post("/api/auth/register").send({
+      student_id: "3002/18",
+      name: "Other Name",
+      email: "other@campus.edu",
+      password: "pass1234"
+    });
+
+    expect(registerRes.status).toBe(201);
+    expect(registerRes.body.success).toBe(true);
+  });
+
   test("register rejects invalid student_id format", async () => {
     const registerRes = await request(app).post("/api/auth/register").send({
       student_id: "STU-010",

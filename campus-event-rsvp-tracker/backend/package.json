@@ -12,7 +12,10 @@
     "db:seed": "node scripts/seed.js",
     "db:init": "node scripts/seed.js",
     "db:check:students": "node scripts/checkStudentRoster.js",
-    "db:import:students": "node scripts/importStudents.js"
+    "db:import:students": "node scripts/importStudents.js",
+    "db:import:students:replace": "node scripts/importStudents.js --replace",
+    "db:import:students:finalized:replace": "node scripts/importStudents.js --replace \"data/Finalized Members 1 - Sheet1.pdf\"",
+    "db:import:students:finalized:dry-run": "node scripts/importStudents.js --replace --dry-run \"data/Finalized Members 1 - Sheet1.pdf\""
   },
   "keywords": [],
   "author": "",

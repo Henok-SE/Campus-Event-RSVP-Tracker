@@ -11,25 +11,6 @@ const { normalizeStudentId, isValidStudentId } = require("../utils/studentId");
 
 const { jwtSecret } = getConfig();
 
-const normalizeEmail = (value = "") => value.trim().toLowerCase();
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-const isCompleteRosterStudent = (student) => {
-  if (!student) {
-    return false;
-  }
-
-  const normalizedStudentId = normalizeStudentId(student.student_id);
-  const normalizedEmail = normalizeEmail(student.email || "");
-  const normalizedName = String(student.name || "").trim();
-
-  return (
-    isValidStudentId(normalizedStudentId) &&
-    EMAIL_PATTERN.test(normalizedEmail) &&
-    Boolean(normalizedName)
-  );
-};
-
 const auditAuthAttempt = async ({ action, studentId, success, reason = null }) => {
   try {
     await AuthAudit.create({
@@ -45,7 +26,7 @@ const auditAuthAttempt = async ({ action, studentId, success, reason = null }) =
 
 exports.register = async (req, res) => {
   try {
-    const { name, email, student_id, password } = req.body;
+    const { student_id, password } = req.body;
 
     if (!student_id || !password) {
       await auditAuthAttempt({
@@ -93,51 +74,6 @@ exports.register = async (req, res) => {
         status: 403,
         code: "REGISTRATION_FORBIDDEN",
         message: "student_id is not authorized for registration"
-      });
-    }
-
-    if (!isCompleteRosterStudent(rosterStudent)) {
-      await auditAuthAttempt({
-        action: "REGISTER",
-        studentId: normalizedStudentId,
-        success: false,
-        reason: "INCOMPLETE_ROSTER_RECORD"
-      });
-
-      return sendError(res, {
-        status: 403,
-        code: "REGISTRATION_FORBIDDEN",
-        message: "student roster record is incomplete"
-      });
-    }
-
-    if (email && normalizeEmail(email) !== rosterStudent.email) {
-      await auditAuthAttempt({
-        action: "REGISTER",
-        studentId: normalizedStudentId,
-        success: false,
-        reason: "EMAIL_MISMATCH"
-      });
-
-      return sendError(res, {
-        status: 400,
-        code: "VALIDATION_ERROR",
-        message: "email does not match student roster"
-      });
-    }
-
-    if (name && name.trim() !== rosterStudent.name) {
-      await auditAuthAttempt({
-        action: "REGISTER",
-        studentId: normalizedStudentId,
-        success: false,
-        reason: "NAME_MISMATCH"
-      });
-
-      return sendError(res, {
-        status: 400,
-        code: "VALIDATION_ERROR",
-        message: "name does not match student roster"
       });
     }
 
