@@ -109,7 +109,7 @@ Backend environment file:
 Required variables:
 
 ```env
-PORT=5000
+PORT=5050
 MONGODB_URI=mongodb://127.0.0.1:27017/eventDB
 JWT_SECRET=dev-jwt-secret-change-me
 ```
@@ -142,7 +142,7 @@ npm run dev:frontend
 
 Default URLs:
 1. Frontend: `http://localhost:5173`
-2. Backend health: `http://localhost:5000/api/health`
+2. Backend health: `http://localhost:5050/api/health`
 
 ## Database Initialization and Seed Data
 The backend includes an idempotent seed script.
