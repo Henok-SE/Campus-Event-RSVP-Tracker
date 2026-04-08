@@ -3,6 +3,8 @@ const mongoose = require("mongoose");
 const cors = require("cors");
 const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
+const multer = require("multer");
+const path = require("path");
 const { sendError, sendSuccess } = require("./utils/apiResponse");
 const { getConfig } = require("./config/env");
 const Student = require("./models/student");
@@ -10,6 +12,7 @@ const Student = require("./models/student");
 const authRoutes = require("./routes/authRoutes");
 const eventRoutes = require("./routes/eventRoutes");
 const rsvpRoutes = require("./routes/rsvpRoutes");
+const notificationRoutes = require("./routes/notificationRoutes");
 
 const app = express();
 const config = getConfig();
@@ -28,6 +31,7 @@ app.use(cors({
 }));
 app.use(helmet());
 app.use(express.json());
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -55,6 +59,7 @@ app.get("/api/health", (req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/events", eventRoutes);
 app.use("/api/rsvp", rsvpRoutes);
+app.use("/api/notifications", notificationRoutes);
 
 app.use((req, res) => {
   return sendError(res, {
@@ -69,6 +74,26 @@ app.use((err, req, res, next) => {
     return next(err);
   }
 
+  if (err instanceof multer.MulterError) {
+    const message = err.code === "LIMIT_FILE_SIZE"
+      ? "Image size must be 5MB or less"
+      : err.message || "Upload failed";
+
+    return sendError(res, {
+      status: 400,
+      code: "UPLOAD_ERROR",
+      message
+    });
+  }
+
+  if (err && /Only JPG, PNG, WEBP, and GIF images are allowed/i.test(err.message || "")) {
+    return sendError(res, {
+      status: 400,
+      code: "UPLOAD_ERROR",
+      message: err.message
+    });
+  }
+
   return sendError(res, {
     status: err.statusCode || 500,
     code: err.code || "INTERNAL_ERROR",
@@ -78,8 +103,10 @@ app.use((err, req, res, next) => {
 });
 
 const connectDB = async () => {
+  const mongoUri = process.env.MONGODB_URI || config.mongoUri;
+
   try {
-    await mongoose.connect(config.mongoUri);
+    await mongoose.connect(mongoUri);
     console.log("Database connected");
 
     try {

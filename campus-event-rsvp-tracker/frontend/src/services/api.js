@@ -30,10 +30,19 @@ export const getApiError = (error, fallbackMessage = 'Request failed') => {
 export const registerUser = (payload) => api.post('/auth/register', payload);
 export const loginUser = (payload) => api.post('/auth/login', payload);
 export const getCurrentUser = () => api.get('/auth/me');
+export const updateCurrentUser = (payload) => api.patch('/auth/me', payload);
 
 export const getEvents = () => api.get('/events');
 export const getEventById = (eventId) => api.get(`/events/${eventId}`);
 export const createEvent = (payload) => api.post('/events', payload);
+export const uploadEventImage = (file) => {
+  const formData = new FormData();
+  formData.append('image', file);
+
+  return api.post('/events/upload-image', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  });
+};
 export const updateEvent = (eventId, payload) => api.patch(`/events/${eventId}`, payload);
 export const deleteEvent = (eventId) => api.delete(`/events/${eventId}`);
 

@@ -6,7 +6,8 @@ import {
   getCurrentUser,
   loginUser,
   registerUser,
-  setAuthToken
+  setAuthToken,
+  updateCurrentUser
 } from '../services/api';
 
 const AuthContext = createContext();
@@ -125,8 +126,26 @@ export function AuthProvider({ children }) {
     setUser(null);
   };
 
+  const updateProfile = async (payload) => {
+    try {
+      const response = await updateCurrentUser(payload);
+      const updatedUser = response?.data?.data;
+
+      if (!updatedUser) {
+        throw new Error('Invalid profile response');
+      }
+
+      localStorage.setItem(AUTH_USER_STORAGE_KEY, JSON.stringify(updatedUser));
+      setUser(updatedUser);
+
+      return updatedUser;
+    } catch (error) {
+      throw getApiError(error, 'Failed to update profile');
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ isLoggedIn, isAuthLoading, token, user, login, register, logout }}>
+    <AuthContext.Provider value={{ isLoggedIn, isAuthLoading, token, user, login, register, logout, updateProfile }}>
       {children}
     </AuthContext.Provider>
   );

@@ -13,6 +13,7 @@ jest.mock("../models/users", () => {
 
   User.findOne = jest.fn();
   User.findById = jest.fn();
+  User.findByIdAndUpdate = jest.fn();
   User.prototype.save = jest.fn();
 
   return User;
@@ -59,6 +60,10 @@ jest.mock("../models/rsvp", () => {
 });
 
 jest.mock("../models/authAudit", () => ({
+  create: jest.fn().mockResolvedValue(undefined)
+}));
+
+jest.mock("../models/notification", () => ({
   create: jest.fn().mockResolvedValue(undefined)
 }));
 
@@ -224,6 +229,67 @@ describe("Backend API smoke tests", () => {
     expect(res.body.data.student_id).toBe("1234/18");
   });
 
+  test("PATCH /api/auth/me updates profile", async () => {
+    const token = jwt.sign({ id: "507f1f77bcf86cd799439011", role: "Student" }, process.env.JWT_SECRET);
+    const selectSpy = jest.fn().mockResolvedValue({
+      _id: "507f1f77bcf86cd799439011",
+      name: "Jane Updated",
+      email: "updated@example.com",
+      student_id: "1234/18",
+      role: "Student"
+    });
+
+    User.findByIdAndUpdate.mockReturnValue({
+      select: selectSpy
+    });
+
+    const res = await request(app)
+      .patch("/api/auth/me")
+      .set("Authorization", `Bearer ${token}`)
+      .send({
+        name: "  Jane Updated  ",
+        email: "UPDATED@EXAMPLE.COM"
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.email).toBe("updated@example.com");
+    expect(User.findByIdAndUpdate).toHaveBeenCalledWith(
+      "507f1f77bcf86cd799439011",
+      { $set: { name: "Jane Updated", email: "updated@example.com" } },
+      { returnDocument: "after", runValidators: true }
+    );
+  });
+
+  test("PATCH /api/auth/me rejects invalid email format", async () => {
+    const token = jwt.sign({ id: "507f1f77bcf86cd799439011", role: "Student" }, process.env.JWT_SECRET);
+
+    const res = await request(app)
+      .patch("/api/auth/me")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ email: "invalid-email" });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.message).toBe("email format is invalid");
+    expect(User.findByIdAndUpdate).not.toHaveBeenCalled();
+  });
+
+  test("PATCH /api/auth/me returns 409 when email is already taken", async () => {
+    const token = jwt.sign({ id: "507f1f77bcf86cd799439011", role: "Student" }, process.env.JWT_SECRET);
+
+    User.findByIdAndUpdate.mockReturnValue({
+      select: jest.fn().mockRejectedValue({ code: 11000 })
+    });
+
+    const res = await request(app)
+      .patch("/api/auth/me")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ email: "taken@example.com" });
+
+    expect(res.status).toBe(409);
+    expect(res.body.error.code).toBe("DUPLICATE_ENTRY");
+  });
+
   test("GET /api/auth/protected requires valid token", async () => {
     const token = jwt.sign({ id: "507f1f77bcf86cd799439011" }, process.env.JWT_SECRET);
 
@@ -293,6 +359,41 @@ describe("Backend API smoke tests", () => {
     expect(res.status).toBe(201);
     expect(res.body.message).toBe("Event created");
     expect(mockSave).toHaveBeenCalled();
+  });
+
+  test("POST /api/events/upload-image rejects unauthenticated requests", async () => {
+    const res = await request(app)
+      .post("/api/events/upload-image")
+      .attach("image", Buffer.from("image-binary"), "poster.jpg");
+
+    expect(res.status).toBe(401);
+    expect(res.body.error.code).toBe("UNAUTHORIZED");
+  });
+
+  test("POST /api/events/upload-image accepts valid image upload", async () => {
+    const token = jwt.sign({ id: "507f1f77bcf86cd799439011", role: "Student" }, process.env.JWT_SECRET);
+
+    const res = await request(app)
+      .post("/api/events/upload-image")
+      .set("Authorization", `Bearer ${token}`)
+      .attach("image", Buffer.from("image-binary"), "poster.jpg");
+
+    expect(res.status).toBe(201);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.image_url).toContain("/uploads/events/");
+    expect(res.body.data.file_path).toContain("/uploads/events/");
+  });
+
+  test("POST /api/events/upload-image rejects invalid file type", async () => {
+    const token = jwt.sign({ id: "507f1f77bcf86cd799439011", role: "Student" }, process.env.JWT_SECRET);
+
+    const res = await request(app)
+      .post("/api/events/upload-image")
+      .set("Authorization", `Bearer ${token}`)
+      .attach("image", Buffer.from("plain-text"), "notes.txt");
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe("UPLOAD_ERROR");
   });
 
   test("PATCH /api/events/:id updates own event", async () => {
@@ -387,6 +488,9 @@ describe("Backend API smoke tests", () => {
     const eventId = new mongoose.Types.ObjectId().toString();
 
     RSVP.findOneAndDelete.mockResolvedValue({ _id: "rsvp-1" });
+    Event.findById.mockReturnValue({
+      select: jest.fn().mockResolvedValue({ _id: eventId, title: "Hackathon" })
+    });
 
     const res = await request(app)
       .delete(`/api/rsvp/${eventId}`)

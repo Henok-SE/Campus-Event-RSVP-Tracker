@@ -1,30 +1,63 @@
 // src/pages/ProfileSettings.jsx
 import { useAuth } from '../context/AuthContext';
-import { useToast } from '../context/ToastContext';
 import { useState } from 'react';
 
 export default function ProfileSettings() {
-  const { user } = useAuth();
-  const toast = useToast();
+  const { user, updateProfile } = useAuth();
   const [formData, setFormData] = useState({
     name: user?.name || '',
     student_id: user?.student_id || '',
     email: user?.email || ''
   });
+  const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
 
   const handleChange = (e) => {
+    setErrorMessage('');
+    setSuccessMessage('');
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSave = () => {
-    toast.success("Profile updated! (mock save)");
-    // In real app → call API to update user
+  const handleSave = async () => {
+    if (loading) {
+      return;
+    }
+
+    setLoading(true);
+    setErrorMessage('');
+    setSuccessMessage('');
+
+    try {
+      await updateProfile({
+        name: formData.name,
+        email: formData.email
+      });
+
+      setSuccessMessage('Profile updated successfully.');
+    } catch (error) {
+      setErrorMessage(error?.message || 'Failed to update profile');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div className="min-h-screen bg-slate-100 p-6">
       <div className="max-w-2xl mx-auto bg-white rounded-3xl shadow-xl p-10">
         <h1 className="text-3xl font-semibold mb-8">Profile Settings</h1>
+
+        {errorMessage ? (
+          <div className="mb-5 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {errorMessage}
+          </div>
+        ) : null}
+
+        {successMessage ? (
+          <div className="mb-5 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+            {successMessage}
+          </div>
+        ) : null}
 
         <div className="space-y-6">
           <div>
@@ -44,8 +77,8 @@ export default function ProfileSettings() {
               type="text" 
               name="student_id"
               value={formData.student_id}
-              onChange={handleChange}
-              className="w-full px-5 py-4 border border-slate-300 rounded-2xl"
+              className="w-full px-5 py-4 border border-slate-300 rounded-2xl bg-slate-50 text-slate-500"
+              readOnly
             />
           </div>
 
@@ -62,9 +95,10 @@ export default function ProfileSettings() {
 
           <button 
             onClick={handleSave}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white py-5 rounded-2xl font-semibold"
+            disabled={loading}
+            className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white py-5 rounded-2xl font-semibold"
           >
-            Save Changes
+            {loading ? 'Saving...' : 'Save Changes'}
           </button>
         </div>
       </div>

@@ -1,23 +1,66 @@
 // src/pages/Landing.jsx
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import EventCard from '../components/ui/EventCard';
+import { getApiError, getEvents } from '../services/api';
+import { mapApiEvent } from '../utils/eventAdapter';
 
-const upcoming = [
-  { id:1, title:"Spring Hackathon '26", date:"Mar 22-23", location:"Engineering Hall", tag:"Tech", image:"https://picsum.photos/id/1015/600/340" },
-  { id:2, title:"Sunset Music Fest", date:"Apr 5", location:"Campus Green", tag:"Music", image:"https://picsum.photos/id/201/600/340" },
-  { id:3, title:"Student Art Exhibition", date:"Apr 12-18", location:"Gallery West", tag:"Art", image:"https://picsum.photos/id/301/600/340" },
-];
+const PUBLIC_EVENT_STATUSES = new Set(['Published', 'Ongoing']);
 
 export default function Landing() {
   const { isLoggedIn } = useAuth();
   const navigate = useNavigate();
+  const [upcoming, setUpcoming] = useState([]);
+  const [isLoadingUpcoming, setIsLoadingUpcoming] = useState(true);
+  const [upcomingError, setUpcomingError] = useState('');
 
   // If already signed up → go straight to Dashboard
   useEffect(() => {
     if (isLoggedIn) navigate('/dashboard', { replace: true });
   }, [isLoggedIn, navigate]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadUpcoming = async () => {
+      setIsLoadingUpcoming(true);
+      setUpcomingError('');
+
+      try {
+        const response = await getEvents();
+        const apiEvents = Array.isArray(response?.data?.data) ? response.data.data : [];
+        const mapped = apiEvents
+          .filter((event) => PUBLIC_EVENT_STATUSES.has(event.status))
+          .map((event) => mapApiEvent(event))
+          .slice(0, 3);
+
+        if (!isMounted) {
+          return;
+        }
+
+        setUpcoming(mapped);
+      } catch (error) {
+        if (!isMounted) {
+          return;
+        }
+
+        const apiError = getApiError(error, 'Failed to load upcoming events');
+        setUpcomingError(apiError.message);
+        setUpcoming([]);
+      } finally {
+        if (isMounted) {
+          setIsLoadingUpcoming(false);
+        }
+      }
+    };
+
+    loadUpcoming();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   return (
     <>
@@ -25,7 +68,7 @@ export default function Landing() {
       <section id="home" className="relative h-screen flex items-center justify-center overflow-hidden bg-cover bg-center"
         style={{ backgroundImage: "url('https://picsum.photos/id/1016/2000/1200')" }}>
         
-        <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/50 to-black/70" />
+        <div className="absolute inset-0 bg-linear-to-b from-black/40 via-black/50 to-black/70" />
 
         <div className="relative z-10 text-center px-6 max-w-5xl mx-auto">
           <div className="inline-flex items-center gap-2 bg-white/90 backdrop-blur-md text-slate-800 px-6 py-2 rounded-full text-sm font-medium mb-8">
@@ -42,7 +85,7 @@ export default function Landing() {
 
           <div className="flex flex-col sm:flex-row gap-5 justify-center">
             <Link 
-              to="/login" 
+              to="/events" 
               className="bg-blue-600 hover:bg-blue-700 text-white px-12 py-5 rounded-2xl font-semibold text-lg transition-all"
             >
              Explore Events →
@@ -111,15 +154,30 @@ export default function Landing() {
           <div>
             <div className="flex justify-between items-end mb-10">
               <h2 className="text-4xl font-bold">Don’t miss out</h2>
-              <Link to="/login" className="text-blue-600 font-medium">View all events →</Link>
+              <Link to="/events" className="text-blue-600 font-medium">View all events →</Link>
             </div>
-            <div className="grid md:grid-cols-3 gap-8">
-              {upcoming.map(event => (
-                <Link key={event.id} to={`/event/${event.id}`} className="block">
-                  <EventCard event={event} />
-                </Link>
-              ))}
-            </div>
+
+            {upcomingError ? (
+              <div className="mb-6 rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-700">
+                {upcomingError}
+              </div>
+            ) : null}
+
+            {isLoadingUpcoming ? (
+              <div className="rounded-3xl bg-white border border-slate-200 p-12 text-center text-slate-500">
+                Loading upcoming events...
+              </div>
+            ) : upcoming.length === 0 ? (
+              <div className="rounded-3xl bg-white border border-slate-200 p-12 text-center text-slate-500">
+                Upcoming events will appear here soon.
+              </div>
+            ) : (
+              <div className="grid md:grid-cols-3 gap-8">
+                {upcoming.map((event) => (
+                  <EventCard key={event.id} event={event} ctaTo={`/event/${event.id}`} ctaLabel="View Details" />
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </section>
