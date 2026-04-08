@@ -3,6 +3,8 @@ const mongoose = require("mongoose");
 const cors = require("cors");
 const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
+const multer = require("multer");
+const path = require("path");
 const { sendError, sendSuccess } = require("./utils/apiResponse");
 const { getConfig } = require("./config/env");
 const Student = require("./models/student");
@@ -29,6 +31,7 @@ app.use(cors({
 }));
 app.use(helmet());
 app.use(express.json());
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -69,6 +72,26 @@ app.use((req, res) => {
 app.use((err, req, res, next) => {
   if (res.headersSent) {
     return next(err);
+  }
+
+  if (err instanceof multer.MulterError) {
+    const message = err.code === "LIMIT_FILE_SIZE"
+      ? "Image size must be 5MB or less"
+      : err.message || "Upload failed";
+
+    return sendError(res, {
+      status: 400,
+      code: "UPLOAD_ERROR",
+      message
+    });
+  }
+
+  if (err && /Only JPG, PNG, WEBP, and GIF images are allowed/i.test(err.message || "")) {
+    return sendError(res, {
+      status: 400,
+      code: "UPLOAD_ERROR",
+      message: err.message
+    });
   }
 
   return sendError(res, {

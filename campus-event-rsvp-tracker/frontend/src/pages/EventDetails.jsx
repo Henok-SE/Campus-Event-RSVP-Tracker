@@ -1,72 +1,131 @@
 // src/pages/EventDetails.jsx
 import { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Calendar, MapPin, Users, Clock } from 'lucide-react';
-import { useToast } from '../context/ToastContext';
+import { MapPin, Users, Clock } from 'lucide-react';
 import Footer from '../components/common/Footer';
+import { cancelRsvp, getApiError, getEventById, getMyRSVPs, rsvpEvent } from '../services/api';
+import { mapApiEvent } from '../utils/eventAdapter';
 
 export default function EventDetails() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const { isLoggedIn } = useAuth();
-  const toast = useToast();
 
   const [event, setEvent] = useState(null);
   const [rsvpStatus, setRsvpStatus] = useState('none'); // 'none' | 'confirmed'
   const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [actionErrorMessage, setActionErrorMessage] = useState('');
 
-  // Dynamic mock event generator
   useEffect(() => {
-    setTimeout(() => {
-      const eventMeta = {
-        1: { title: "Spring Hackathon '26", location: "Engineering Hall", date: "Mar 22-23", tag: "Tech", image: "https://picsum.photos/id/1015/1200/600" },
-        2: { title: "Sunset Music Fest", location: "Campus Green", date: "Apr 5", tag: "Music", image: "https://picsum.photos/id/201/1200/600" },
-        3: { title: "Student Art Exhibition", location: "Gallery West", date: "Apr 12-18", tag: "Art", image: "https://picsum.photos/id/301/1200/600" },
-        4: { title: "Pizza & Philosophy", location: "Library Lounge", date: "Coming Soon", tag: "Free Food", image: "https://picsum.photos/id/401/1200/600" },
-        5: { title: "24-Hour Hackathon", location: "Engineering Hall 201", date: "March 20", tag: "Tech", image: "https://picsum.photos/id/450/1200/600" },
-        6: { title: "Sunset Yoga on the Lawn", location: "West Lawn", date: "Coming Soon", tag: "Social", image: "https://picsum.photos/id/601/1200/600" },
-        7: { title: "Open Mic Night", location: "Student Center Stage", date: "Coming Soon", tag: "Arts", image: "https://picsum.photos/id/701/1200/600" },
-        8: { title: "AI & Ethics Panel Discussion", location: "Auditorium B", date: "Coming Soon", tag: "Academic", image: "https://picsum.photos/id/801/1200/600" },
-        9: { title: "Taco Tuesday Social", location: "Dining Hall Patio", date: "Coming Soon", tag: "Free Food", image: "https://picsum.photos/id/901/1200/600" }
-      };
+    let isMounted = true;
 
-      const meta = eventMeta[Number(id)] || {
-        title: "Intramural Basketball Finals",
-        location: "Recreation Center",
-        date: "March 25, 2026",
-        tag: "Sports",
-        image: "https://picsum.photos/id/1018/1200/600"
-      };
+    const loadEventDetails = async () => {
+      setLoading(true);
+      setErrorMessage('');
 
-      const mockEvent = {
-        id: Number(id),
-        title: meta.title,
-        description: `Join us for ${meta.title}! Bring your spirit. This is the highlight of the week — come engage with the community, enjoy the atmosphere, and celebrate campus spirit. All students welcome.`,
-        location: meta.location,
-        date: meta.date + " • 6:00 PM - 8:00 PM",
-        attending: Math.floor(Math.random() * 200) + 50,
-        capacity: 300,
-        tags: [meta.tag],
-        image: meta.image,
-        organizer: "Campus Organizations",
-      };
-      setEvent(mockEvent);
-      setLoading(false);
-    }, 400);
-  }, [id]);
+      try {
+        const eventResponse = await getEventById(id);
+        const apiEvent = eventResponse?.data?.data;
 
-  const handleRSVP = () => {
-    if (!isLoggedIn) {
-      window.location.href = `/login?redirect=/event/${id}`;
-      return;
-    }
-    setRsvpStatus('confirmed');
-    toast.success("Successfully RSVP'd! Check your My Schedule.");
+        if (!apiEvent) {
+          throw new Error('Event data is missing');
+        }
+
+        const eventId = String(apiEvent._id || apiEvent.id || '');
+        let isRsvpd = false;
+
+        if (isLoggedIn && eventId) {
+          const myRsvpsResponse = await getMyRSVPs();
+          const myRsvps = Array.isArray(myRsvpsResponse?.data?.data)
+            ? myRsvpsResponse.data.data
+            : [];
+
+          isRsvpd = myRsvps.some((record) => String(record?.event?._id || '') === eventId);
+        }
+
+        const mappedEvent = mapApiEvent(apiEvent, {
+          rsvpSet: isRsvpd && eventId ? new Set([eventId]) : new Set()
+        });
+
+        if (!isMounted) {
+          return;
+        }
+
+        setEvent(mappedEvent);
+        setRsvpStatus(isRsvpd ? 'confirmed' : 'none');
+      } catch (error) {
+        if (!isMounted) {
+          return;
+        }
+
+        const apiError = getApiError(error, 'Failed to load event details');
+        setErrorMessage(apiError.message);
+        setEvent(null);
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    loadEventDetails();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [id, isLoggedIn]);
+
+  const applyLocalRsvpChange = (nextStatus) => {
+    setRsvpStatus(nextStatus);
+    setEvent((prev) => {
+      if (!prev) {
+        return prev;
+      }
+
+      const delta = nextStatus === 'confirmed' ? 1 : -1;
+      const nextAttending = Math.max(0, (prev.attending || 0) + delta);
+
+      return {
+        ...prev,
+        attending: nextAttending,
+        seatsLeft: prev.capacity > 0 ? Math.max(0, prev.capacity - nextAttending) : null
+      };
+    });
   };
 
-  const handleCancel = () => {
-    setRsvpStatus('none');
-    toast.success("RSVP cancelled.");
+  const handleRSVPAction = async () => {
+    if (!isLoggedIn) {
+      navigate(`/login?redirect=${encodeURIComponent(`/event/${id}`)}`);
+      return;
+    }
+
+    if (!event || actionLoading) {
+      return;
+    }
+
+    const currentStatus = rsvpStatus;
+    const nextStatus = currentStatus === 'confirmed' ? 'none' : 'confirmed';
+
+    setActionErrorMessage('');
+    setActionLoading(true);
+    applyLocalRsvpChange(nextStatus);
+
+    try {
+      if (nextStatus === 'confirmed') {
+        await rsvpEvent(event.id);
+      } else {
+        await cancelRsvp(event.id);
+      }
+    } catch (error) {
+      applyLocalRsvpChange(currentStatus);
+      const apiError = getApiError(error, 'Failed to update RSVP');
+      setActionErrorMessage(apiError.message);
+    } finally {
+      setActionLoading(false);
+    }
   };
 
   if (loading) {
@@ -80,14 +139,16 @@ export default function EventDetails() {
   if (!event) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 p-6 text-center">
-        <h1 className="text-3xl font-bold mb-4">Event not found</h1>
+        <h1 className="text-3xl font-bold mb-4">Event not available</h1>
+        {errorMessage ? <p className="mb-4 text-sm text-slate-600">{errorMessage}</p> : null}
         <Link to="/dashboard" className="text-blue-600 hover:underline">Back to Dashboard</Link>
       </div>
     );
   }
 
-  const isFull = event.attending >= event.capacity;
-  const canRSVP = rsvpStatus === 'none' && !isFull;
+  const isClosed = event.status === 'Cancelled' || event.status === 'Completed';
+  const isFull = event.capacity > 0 && event.attending >= event.capacity;
+  const canRSVP = rsvpStatus === 'none' && !isFull && !isClosed;
   const isConfirmed = rsvpStatus === 'confirmed';
 
   return (
@@ -107,7 +168,7 @@ export default function EventDetails() {
         <div className="bg-white rounded-3xl shadow overflow-hidden mb-12 border border-gray-200">
           {event.image && (
             <div 
-              className="h-64 sm:h-80 md:h-[420px] bg-cover bg-center"
+              className="h-64 sm:h-80 md:h-105 bg-cover bg-center"
               style={{ backgroundImage: `url(${event.image})` }}
             />
           )}
@@ -132,12 +193,18 @@ export default function EventDetails() {
             <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-6">{event.title}</h1>
             <p className="text-lg sm:text-xl text-gray-700 leading-relaxed mb-10">{event.description}</p>
 
+            {actionErrorMessage ? (
+              <div className="mb-6 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                {actionErrorMessage}
+              </div>
+            ) : null}
+
             <div className="grid sm:grid-cols-3 gap-8 text-sm mb-12">
               <div>
                 <p className="text-gray-500 mb-1 flex items-center gap-2">
                   <Clock size={16} /> When
                 </p>
-                <p className="font-medium">{event.date}</p>
+                <p className="font-medium">{event.date}{event.time && event.time !== 'TBA' ? ` • ${event.time}` : ''}</p>
               </div>
               <div>
                 <p className="text-gray-500 mb-1 flex items-center gap-2">
@@ -163,19 +230,25 @@ export default function EventDetails() {
                 </div>
               ) : canRSVP ? (
                 <button
-                  onClick={handleRSVP}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-12 py-5 rounded-2xl font-semibold text-lg transition-all"
+                  onClick={handleRSVPAction}
+                  disabled={actionLoading}
+                  className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-12 py-5 rounded-2xl font-semibold text-lg transition-all"
                 >
-                  Count Me In
+                  {actionLoading ? 'Saving...' : 'Count Me In'}
                 </button>
+              ) : isClosed ? (
+                <div className="bg-slate-200 text-slate-700 px-10 py-5 rounded-2xl font-semibold">
+                  RSVP unavailable for this event status
+                </div>
               ) : null}
 
               {isConfirmed && (
                 <button
-                  onClick={handleCancel}
-                  className="px-10 py-5 rounded-2xl font-medium text-red-600 border border-red-200 hover:bg-red-50 transition-colors"
+                  onClick={handleRSVPAction}
+                  disabled={actionLoading}
+                  className="px-10 py-5 rounded-2xl font-medium text-red-600 border border-red-200 hover:bg-red-50 disabled:opacity-60 transition-colors"
                 >
-                  Cancel RSVP
+                  {actionLoading ? 'Saving...' : 'Cancel RSVP'}
                 </button>
               )}
             </div>

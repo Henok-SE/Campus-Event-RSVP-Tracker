@@ -1,27 +1,75 @@
 // src/pages/Events.jsx
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
 import EventCard from '../components/ui/EventCard';
-
-const allEvents = [
-  { id:1, title:"Spring Hackathon '26", date:"Mar 22-23", location:"Engineering Hall", tag:"Tech", image:"https://picsum.photos/id/1015/600/340" },
-  { id:2, title:"Sunset Music Fest", date:"Apr 5", location:"Campus Green", tag:"Music", image:"https://picsum.photos/id/201/600/340" },
-  { id:3, title:"Student Art Exhibition", date:"Apr 12-18", location:"Gallery West", tag:"Art", image:"https://picsum.photos/id/301/600/340" },
-  { id:4, title:"Intramural Basketball Finals", date:"Mar 25", location:"Recreation Center", tag:"Sports", image:"https://picsum.photos/id/401/600/340" },
-  { id:5, title:"24-Hour Hackathon", date:"Mar 20", location:"Engineering Hall 201", tag:"Tech", image:"https://picsum.photos/id/1015/600/340" },
-];
+import { getApiError, getEvents } from '../services/api';
+import { mapApiEvent } from '../utils/eventAdapter';
 
 const categories = ["All Events", "Sports", "Arts", "Academic", "Social", "Free Food", "Tech"];
+const PUBLIC_EVENT_STATUSES = new Set(['Published', 'Ongoing']);
 
 export default function Events() {
+  const [events, setEvents] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState('');
   const [searchTerm, setSearchTerm] = useState("");
   const [activeCategory, setActiveCategory] = useState("All Events");
 
-  const filteredEvents = allEvents.filter(event => {
-    const matchesSearch = event.title.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = activeCategory === "All Events" || event.tag === activeCategory;
-    return matchesSearch && matchesCategory;
-  });
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadEvents = async () => {
+      setLoading(true);
+      setErrorMessage('');
+
+      try {
+        const response = await getEvents();
+        const apiEvents = Array.isArray(response?.data?.data) ? response.data.data : [];
+
+        const mapped = apiEvents
+          .filter((event) => PUBLIC_EVENT_STATUSES.has(event.status))
+          .map((event) => mapApiEvent(event));
+
+        if (!isMounted) {
+          return;
+        }
+
+        setEvents(mapped);
+      } catch (error) {
+        if (!isMounted) {
+          return;
+        }
+
+        const apiError = getApiError(error, 'Failed to load events');
+        setErrorMessage(apiError.message);
+        setEvents([]);
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    loadEvents();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const filteredEvents = useMemo(() => {
+    const term = searchTerm.toLowerCase().trim();
+
+    return events.filter((event) => {
+      const matchesSearch = !term
+        || event.title.toLowerCase().includes(term)
+        || event.desc.toLowerCase().includes(term)
+        || event.location.toLowerCase().includes(term)
+        || event.tags.some((tag) => String(tag).toLowerCase().includes(term));
+      const matchesCategory = activeCategory === "All Events" || event.tag === activeCategory;
+
+      return matchesSearch && matchesCategory;
+    });
+  }, [events, searchTerm, activeCategory]);
 
   return (
     <div className="bg-white min-h-screen">
@@ -61,16 +109,26 @@ export default function Events() {
       <div className="max-w-7xl mx-auto px-6 py-12">
         <h1 className="text-4xl font-bold mb-8">All Events ({filteredEvents.length})</h1>
 
-        <div className="grid md:grid-cols-3 gap-8">
-          {filteredEvents.map(event => (
-            <Link key={event.id} to={`/event/${event.id}`}>
-              <EventCard event={event} />
-            </Link>
-          ))}
-        </div>
+        {errorMessage ? (
+          <div className="mb-6 rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-700">
+            {errorMessage}
+          </div>
+        ) : null}
 
-        {filteredEvents.length === 0 && (
-          <p className="text-center text-2xl text-slate-400 py-20">No events found 😕</p>
+        {loading ? (
+          <div className="text-center text-slate-500 py-20">Loading events...</div>
+        ) : (
+          <>
+            <div className="grid md:grid-cols-3 gap-8">
+              {filteredEvents.map((event) => (
+                <EventCard key={event.id} event={event} ctaTo={`/event/${event.id}`} ctaLabel="View Details" />
+              ))}
+            </div>
+
+            {filteredEvents.length === 0 && (
+              <p className="text-center text-2xl text-slate-400 py-20">No events found</p>
+            )}
+          </>
         )}
       </div>
     </div>

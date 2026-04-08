@@ -35,6 +35,44 @@ const serializeEvent = (eventDoc, attendingCount) => {
   };
 };
 
+exports.uploadEventImage = async (req, res) => {
+  try {
+    if (!req.user || !req.user.id) {
+      return sendError(res, {
+        status: 401,
+        code: "UNAUTHORIZED",
+        message: "Unauthorized"
+      });
+    }
+
+    if (!req.file) {
+      return sendError(res, {
+        status: 400,
+        code: "VALIDATION_ERROR",
+        message: "Image file is required"
+      });
+    }
+
+    const filePath = `/uploads/events/${req.file.filename}`;
+    const imageUrl = `${req.protocol}://${req.get("host")}${filePath}`;
+
+    return sendSuccess(res, {
+      status: 201,
+      message: "Image uploaded",
+      data: {
+        image_url: imageUrl,
+        file_path: filePath
+      }
+    });
+  } catch (err) {
+    return sendError(res, {
+      status: 500,
+      code: "UPLOAD_FAILED",
+      message: "Error uploading image"
+    });
+  }
+};
+
 exports.createEvent = async (req, res) => {
   try {
     const { title, description, location, event_date, time, capacity, category, image_url, status } = req.body;

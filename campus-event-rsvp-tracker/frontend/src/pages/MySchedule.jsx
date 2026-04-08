@@ -3,59 +3,74 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Footer from '../components/common/Footer';
 import { Calendar, MapPin, Users, X } from 'lucide-react';
-import { useToast } from '../context/ToastContext';
+import { cancelRsvp, getApiError, getMyRSVPs } from '../services/api';
+import { mapMyRsvpRecord } from '../utils/eventAdapter';
 
 export default function MySchedule() {
-  const toast = useToast();
   const [myEvents, setMyEvents] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [pendingEventId, setPendingEventId] = useState(null);
 
-  // Mock data (replace with Axios GET /api/my-rsvps later)
   useEffect(() => {
-    setTimeout(() => {
-      const mockMyEvents = [
-        {
-          id: 6,
-          title: "Sunset Yoga on the Lawn",
-          date: "March 21, 2026",
-          time: "6:00 PM",
-          location: "West Lawn",
-          attending: 45,
-          capacity: 60,
-          status: "confirmed",
-          image: "https://picsum.photos/id/601/600/340"
-        },
-        {
-          id: 3,
-          title: "Intramural Basketball Finals",
-          date: "March 25, 2026",
-          time: "6:00 PM",
-          location: "Recreation Center",
-          attending: 256,
-          capacity: 300,
-          status: "confirmed",
-          image: "https://picsum.photos/id/1018/600/340"
-        },
-        {
-          id: 9,
-          title: "Taco Tuesday Social",
-          date: "March 24, 2026",
-          time: "7:00 PM",
-          location: "Dining Hall Patio",
-          attending: 76,
-          capacity: 100,
-          status: "confirmed",
-          image: "https://picsum.photos/id/901/600/340"
+    let isMounted = true;
+
+    const loadSchedule = async () => {
+      setLoading(true);
+      setErrorMessage('');
+
+      try {
+        const response = await getMyRSVPs();
+        const records = Array.isArray(response?.data?.data) ? response.data.data : [];
+        const mapped = records.map((record) => mapMyRsvpRecord(record));
+
+        if (!isMounted) {
+          return;
         }
-      ];
-      setMyEvents(mockMyEvents);
-      setLoading(false);
-    }, 600);
+
+        setMyEvents(mapped);
+      } catch (error) {
+        if (!isMounted) {
+          return;
+        }
+
+        const apiError = getApiError(error, 'Failed to load your schedule');
+        setErrorMessage(apiError.message);
+        setMyEvents([]);
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    loadSchedule();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
-  const handleCancelRSVP = (eventId) => {
-    setMyEvents(prev => prev.filter(ev => ev.id !== eventId));
-    toast.success(`RSVP cancelled for this event.`);
+  const handleCancelRSVP = async (eventId) => {
+    if (!eventId || pendingEventId) {
+      return;
+    }
+
+    const previousEvents = myEvents;
+
+    setErrorMessage('');
+    setPendingEventId(eventId);
+    setMyEvents((prev) => prev.filter((ev) => ev.id !== eventId));
+
+    try {
+      await cancelRsvp(eventId);
+    } catch (error) {
+      const apiError = getApiError(error, 'Failed to cancel RSVP');
+      setErrorMessage(apiError.message);
+      setMyEvents(previousEvents);
+    } finally {
+      setPendingEventId(null);
+    }
   };
 
   if (loading) {
@@ -87,6 +102,12 @@ export default function MySchedule() {
       </div>
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-12">
+        {errorMessage ? (
+          <div className="mb-6 rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-700">
+            {errorMessage}
+          </div>
+        ) : null}
+
         {myEvents.length === 0 ? (
           <div className="bg-white rounded-3xl p-16 text-center border border-slate-200">
             <Calendar className="w-16 h-16 mx-auto text-slate-400 mb-6" />
@@ -96,7 +117,7 @@ export default function MySchedule() {
               Browse events and join something exciting!
             </p>
             <Link
-              to="/dashboard"
+              to="/events"
               className="inline-block bg-blue-600 text-white px-10 py-4 rounded-2xl font-medium hover:bg-blue-700 transition-colors"
             >
               Browse Events
@@ -112,7 +133,7 @@ export default function MySchedule() {
                 <div className="flex flex-col sm:flex-row gap-6">
                   {/* Event Image */}
                   <div 
-                    className="sm:w-48 h-40 sm:h-40 rounded-2xl bg-cover bg-center flex-shrink-0" 
+                    className="sm:w-48 h-40 sm:h-40 rounded-2xl bg-cover bg-center shrink-0" 
                     style={{ backgroundImage: `url(${ev.image})` }} 
                   />
 
@@ -144,9 +165,10 @@ export default function MySchedule() {
                     
                     <button
                       onClick={() => handleCancelRSVP(ev.id)}
-                      className="mt-6 sm:mt-0 px-8 py-3 rounded-2xl border border-red-200 text-red-600 hover:bg-red-50 transition-colors font-medium flex items-center gap-2"
+                      disabled={pendingEventId === ev.id}
+                      className="mt-6 sm:mt-0 px-8 py-3 rounded-2xl border border-red-200 text-red-600 hover:bg-red-50 disabled:opacity-60 transition-colors font-medium flex items-center gap-2"
                     >
-                      <X size={18} /> Cancel RSVP
+                      <X size={18} /> {pendingEventId === ev.id ? 'Cancelling...' : 'Cancel RSVP'}
                     </button>
                   </div>
                 </div>

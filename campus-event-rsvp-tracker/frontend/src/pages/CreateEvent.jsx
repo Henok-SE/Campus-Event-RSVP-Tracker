@@ -3,12 +3,11 @@ import { useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Footer from '../components/common/Footer';
 import { X, Image as ImageIcon } from 'lucide-react';
-import { useToast } from '../context/ToastContext';
+import { createEvent, getApiError, uploadEventImage } from '../services/api';
 
 export default function CreateEvent() {
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
-  const toast = useToast();
 
   const [formData, setFormData] = useState({
     title: '',
@@ -22,10 +21,15 @@ export default function CreateEvent() {
   });
 
   const [imagePreview, setImagePreview] = useState(null);
+  const [imageFile, setImageFile] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
+    setErrorMessage('');
+    setSuccessMessage('');
     setFormData(prev => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value
@@ -38,14 +42,18 @@ export default function CreateEvent() {
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
-      toast.error("Please upload an image file (JPG, PNG, etc.)");
+      setErrorMessage('Please upload an image file (JPG, PNG, etc.)');
       return;
     }
 
     if (file.size > 5 * 1024 * 1024) { // 5MB limit
-      toast.error("Image size must be less than 5MB");
+      setErrorMessage('Image size must be less than 5MB');
       return;
     }
+
+    setErrorMessage('');
+    setSuccessMessage('');
+    setImageFile(file);
 
     // Create preview
     const reader = new FileReader();
@@ -57,19 +65,59 @@ export default function CreateEvent() {
 
   const removeImage = () => {
     setImagePreview(null);
+    setImageFile(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (loading) {
+      return;
+    }
+
+    setErrorMessage('');
+    setSuccessMessage('');
     setLoading(true);
 
-    // Mock API call - later replace with Axios + FormData for image upload
-    setTimeout(() => {
-      toast.success("Event created successfully! 🎉\nYour event has been submitted for review.");
-      navigate('/dashboard');
+    try {
+      let imageUrl;
+
+      if (imageFile) {
+        const uploadResponse = await uploadEventImage(imageFile);
+        imageUrl = uploadResponse?.data?.data?.image_url;
+      }
+
+      const payload = {
+        title: formData.title.trim(),
+        description: formData.description.trim() || undefined,
+        location: formData.location.trim() || undefined,
+        event_date: formData.event_date ? new Date(formData.event_date).toISOString() : undefined,
+        time: formData.time || undefined,
+        capacity: formData.capacity ? Number(formData.capacity) : undefined,
+        category: formData.category,
+        status: 'Published',
+        tags: [formData.category],
+        image_url: imageUrl
+      };
+
+      const createResponse = await createEvent(payload);
+      const createdEvent = createResponse?.data?.data;
+
+      setSuccessMessage('Event created successfully! Redirecting to details...');
+
+      const createdId = createdEvent?._id || createdEvent?.id;
+      if (createdId) {
+        navigate(`/event/${createdId}`);
+      } else {
+        navigate('/dashboard');
+      }
+    } catch (error) {
+      const apiError = getApiError(error, 'Failed to create event');
+      setErrorMessage(apiError.message);
+    } finally {
       setLoading(false);
-    }, 1500);
+    }
   };
 
   return (
@@ -87,6 +135,17 @@ export default function CreateEvent() {
 
       <main className="max-w-4xl mx-auto px-6 py-12">
         <form onSubmit={handleSubmit} className="bg-white rounded-3xl shadow border border-slate-200 p-8 md:p-12">
+          {errorMessage ? (
+            <div className="mb-6 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              {errorMessage}
+            </div>
+          ) : null}
+
+          {successMessage ? (
+            <div className="mb-6 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+              {successMessage}
+            </div>
+          ) : null}
           
           {/* Image Upload Section */}
           <div className="mb-12">

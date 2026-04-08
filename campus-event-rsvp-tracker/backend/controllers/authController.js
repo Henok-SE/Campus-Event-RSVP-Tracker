@@ -318,3 +318,104 @@ exports.me = async (req, res) => {
     });
   }
 };
+
+exports.updateMe = async (req, res) => {
+  try {
+    if (!req.user || !req.user.id) {
+      return sendError(res, {
+        status: 401,
+        code: "UNAUTHORIZED",
+        message: "Unauthorized"
+      });
+    }
+
+    const { name, email } = req.body || {};
+    const updates = {};
+
+    if (name !== undefined) {
+      const trimmedName = String(name).trim();
+
+      if (!trimmedName) {
+        return sendError(res, {
+          status: 400,
+          code: "VALIDATION_ERROR",
+          message: "name cannot be empty"
+        });
+      }
+
+      updates.name = trimmedName;
+    }
+
+    if (email !== undefined) {
+      const trimmedEmail = String(email).trim().toLowerCase();
+
+      if (!trimmedEmail) {
+        return sendError(res, {
+          status: 400,
+          code: "VALIDATION_ERROR",
+          message: "email cannot be empty"
+        });
+      }
+
+      const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailPattern.test(trimmedEmail)) {
+        return sendError(res, {
+          status: 400,
+          code: "VALIDATION_ERROR",
+          message: "email format is invalid"
+        });
+      }
+
+      updates.email = trimmedEmail;
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return sendError(res, {
+        status: 400,
+        code: "VALIDATION_ERROR",
+        message: "At least one updatable field is required"
+      });
+    }
+
+    const user = await User.findByIdAndUpdate(
+      req.user.id,
+      { $set: updates },
+      { new: true, runValidators: true }
+    ).select("_id name email student_id role");
+
+    if (!user) {
+      return sendError(res, {
+        status: 404,
+        code: "USER_NOT_FOUND",
+        message: "User not found"
+      });
+    }
+
+    return sendSuccess(res, {
+      status: 200,
+      message: "Profile updated",
+      data: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        student_id: user.student_id,
+        role: user.role
+      }
+    });
+  } catch (error) {
+    if (error && error.code === 11000) {
+      return sendError(res, {
+        status: 409,
+        code: "DUPLICATE_ENTRY",
+        message: "A user with this email already exists",
+        details: { field: "email" }
+      });
+    }
+
+    return sendError(res, {
+      status: 500,
+      code: "PROFILE_UPDATE_FAILED",
+      message: "Failed to update profile"
+    });
+  }
+};

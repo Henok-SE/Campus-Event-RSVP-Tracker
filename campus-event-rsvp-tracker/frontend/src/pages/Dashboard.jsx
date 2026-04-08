@@ -6,103 +6,9 @@ import Footer from '../components/common/Footer';
 import { useDebounce } from '../hooks/useDebounce';
 import { useAuth } from '../context/AuthContext';
 import { getEvents, getMyRSVPs, rsvpEvent, cancelRsvp, getApiError } from '../services/api';
+import { mapApiEvent } from '../utils/eventAdapter';
 
 const DEFAULT_CATEGORIES = ['Sports', 'Arts', 'Academic', 'Social', 'Free Food', 'Tech'];
-
-const pad2 = (value) => String(value).padStart(2, '0');
-
-const getCountdown = (eventDate) => {
-  if (!eventDate) {
-    return '-- : -- : --';
-  }
-
-  const target = new Date(eventDate).getTime();
-  if (Number.isNaN(target)) {
-    return '-- : -- : --';
-  }
-
-  const diff = target - Date.now();
-  if (diff <= 0) {
-    return '00 : 00 : 00';
-  }
-
-  const totalSeconds = Math.floor(diff / 1000);
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const seconds = totalSeconds % 60;
-
-  return `${pad2(hours)} : ${pad2(minutes)} : ${pad2(seconds)}`;
-};
-
-const getStartsIn = (eventDate) => {
-  if (!eventDate) {
-    return 'TBA';
-  }
-
-  const target = new Date(eventDate).getTime();
-  if (Number.isNaN(target)) {
-    return 'TBA';
-  }
-
-  const diff = target - Date.now();
-  if (diff <= 0) {
-    return 'Started';
-  }
-
-  const totalMinutes = Math.floor(diff / 60000);
-  const hours = Math.floor(totalMinutes / 60);
-  const minutes = totalMinutes % 60;
-
-  if (hours >= 24) {
-    const days = Math.floor(hours / 24);
-    const remHours = hours % 24;
-    return `${days}d ${remHours}h`;
-  }
-
-  return `${hours}h ${minutes}m`;
-};
-
-const normalizeTags = (tags, category) => {
-  if (Array.isArray(tags) && tags.length > 0) {
-    return tags.filter(Boolean);
-  }
-
-  if (category) {
-    return [category];
-  }
-
-  return ['General'];
-};
-
-const mapApiEvent = (event, rsvpSet) => {
-  const id = event._id || event.id;
-  const tags = normalizeTags(event.tags, event.category);
-  const category = event.category || tags[0] || 'General';
-  const attending = Number.isInteger(event.attending)
-    ? event.attending
-    : Number(event.attending_count || 0);
-  const capacity = Number.isInteger(event.capacity)
-    ? event.capacity
-    : Number(event.capacity || 0);
-  const starts = getStartsIn(event.event_date);
-  const seatsLeft = capacity > 0 ? Math.max(0, capacity - attending) : null;
-
-  return {
-    id,
-    title: event.title || 'Untitled event',
-    desc: event.description || 'No description available yet.',
-    location: event.location || 'Location to be announced',
-    attending,
-    capacity,
-    countdown: getCountdown(event.event_date),
-    tags,
-    image: event.image_url || `https://picsum.photos/seed/${id}/2000/1200`,
-    category,
-    starts,
-    seatsLeft,
-    rsvpStatus: rsvpSet.has(String(id)) ? 'rsvpd' : 'available'
-  };
-};
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -204,7 +110,7 @@ export default function Dashboard() {
           );
         }
 
-        const mappedEvents = apiEvents.map((event) => mapApiEvent(event, rsvpSet));
+        const mappedEvents = apiEvents.map((event) => mapApiEvent(event, { rsvpSet }));
         const scheduleIds = mappedEvents
           .filter((event) => event.rsvpStatus === 'rsvpd')
           .map((event) => event.id);
