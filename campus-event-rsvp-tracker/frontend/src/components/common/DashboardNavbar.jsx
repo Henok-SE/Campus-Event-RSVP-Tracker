@@ -1,8 +1,64 @@
 // src/components/common/DashboardNavbar.jsx
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { LogOut, Calendar, Settings, HelpCircle, Bell, Menu, X } from 'lucide-react';
+import { LogOut, Calendar, Settings, HelpCircle, Bell, Menu, X, Trash2 } from 'lucide-react';
+import {
+  getApiError,
+  deleteNotification,
+  getNotifications,
+  markAllNotificationsRead,
+  markNotificationRead
+} from '../../services/api';
+
+const formatNotificationTime = (value) => {
+  if (!value) {
+    return 'Just now';
+  }
+
+  const createdAt = new Date(value);
+  if (Number.isNaN(createdAt.getTime())) {
+    return 'Just now';
+  }
+
+  const diffMinutes = Math.floor((Date.now() - createdAt.getTime()) / 60000);
+
+  if (diffMinutes < 1) {
+    return 'Just now';
+  }
+
+  if (diffMinutes < 60) {
+    return `${diffMinutes} min ago`;
+  }
+
+  const diffHours = Math.floor(diffMinutes / 60);
+  if (diffHours < 24) {
+    return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+  }
+
+  const diffDays = Math.floor(diffHours / 24);
+  if (diffDays === 1) {
+    return 'Yesterday';
+  }
+
+  if (diffDays < 7) {
+    return `${diffDays} days ago`;
+  }
+
+  return createdAt.toLocaleDateString();
+};
+
+const toNotificationVm = (item) => ({
+  id: item?.id,
+  type: item?.type || 'info',
+  title: item?.title || 'Notification',
+  message: item?.message || '',
+  read: Boolean(item?.read),
+  created_at: item?.created_at,
+  eventId: item?.event_id || null
+});
+
+const NOTIFICATIONS_POLL_MS = 45_000;
 
 export default function DashboardNavbar({ rsvpCount }) {
   const { user, logout } = useAuth();
@@ -11,8 +67,6 @@ export default function DashboardNavbar({ rsvpCount }) {
   const [profileOpen, setProfileOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [showSettingsModal, setShowSettingsModal] = useState(false);
-  const [showHelpModal, setShowHelpModal] = useState(false);
 
   const navRef = useRef(null);
 
@@ -29,43 +83,119 @@ export default function DashboardNavbar({ rsvpCount }) {
     };
   }, []);
 
-  // Mock notifications (later connect to real backend)
-  const [notifications, setNotifications] = useState([
-    {
-      id: 1,
-      type: "success",
-      message: "You successfully RSVP'd to Intramural Basketball Finals",
-      time: "2 min ago",
-      read: false,
-      eventId: 3
-    },
-    {
-      id: 2,
-      type: "reminder",
-      message: "Sunset Yoga on the Lawn starts in 3 hours",
-      time: "1 hour ago",
-      read: true,
-      eventId: 6
-    },
-    {
-      id: 3,
-      type: "info",
-      message: "Taco Tuesday Social has 12 spots left",
-      time: "Yesterday",
-      read: true,
-      eventId: 9
+  const [notifications, setNotifications] = useState([]);
+  const [notificationsLoading, setNotificationsLoading] = useState(false);
+  const [notificationsError, setNotificationsError] = useState('');
+  const [deletingNotificationId, setDeletingNotificationId] = useState('');
+  const notificationsRequestInFlightRef = useRef(false);
+
+  const fetchNotifications = useCallback(async ({ silent = false } = {}) => {
+    if (notificationsRequestInFlightRef.current) {
+      return;
     }
-  ]);
+
+    notificationsRequestInFlightRef.current = true;
+
+    if (!silent) {
+      setNotificationsLoading(true);
+      setNotificationsError('');
+    }
+
+    try {
+      const response = await getNotifications();
+      const rows = Array.isArray(response?.data?.data) ? response.data.data : [];
+      setNotifications(rows.map((item) => toNotificationVm(item)));
+    } catch (error) {
+      const apiError = getApiError(error, 'Failed to load notifications');
+      setNotificationsError(apiError.message);
+
+      if (!silent) {
+        setNotifications([]);
+      }
+    } finally {
+      notificationsRequestInFlightRef.current = false;
+
+      if (!silent) {
+        setNotificationsLoading(false);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchNotifications();
+  }, [fetchNotifications]);
+
+  useEffect(() => {
+    const timerId = window.setInterval(() => {
+      if (!document.hidden) {
+        fetchNotifications({ silent: true });
+      }
+    }, NOTIFICATIONS_POLL_MS);
+
+    return () => {
+      window.clearInterval(timerId);
+    };
+  }, [fetchNotifications]);
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
-  const markAllAsRead = () => {
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+  const markAllAsRead = async () => {
+    if (unreadCount === 0) {
+      return;
+    }
+
+    const snapshot = notifications;
+    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+
+    try {
+      await markAllNotificationsRead();
+    } catch (error) {
+      const apiError = getApiError(error, 'Failed to update notifications');
+      setNotifications(snapshot);
+      setNotificationsError(apiError.message);
+    }
   };
 
-  const handleNotificationClick = (eventId) => {
+  const handleNotificationClick = async (notification) => {
     setNotificationsOpen(false);
-    if (eventId) navigate(`/event/${eventId}`);
+
+    if (!notification.read) {
+      const snapshot = notifications;
+      setNotifications((prev) => prev.map((n) => (
+        n.id === notification.id ? { ...n, read: true } : n
+      )));
+
+      try {
+        await markNotificationRead(notification.id);
+      } catch {
+        setNotifications(snapshot);
+      }
+    }
+
+    if (notification.eventId) {
+      navigate(`/event/${notification.eventId}`);
+    }
+  };
+
+  const handleDeleteNotification = async (notificationId) => {
+    if (!notificationId || deletingNotificationId) {
+      return;
+    }
+
+    const snapshot = notifications;
+    setDeletingNotificationId(notificationId);
+    setNotificationsError('');
+    setNotifications((prev) => prev.filter((item) => item.id !== notificationId));
+
+    try {
+      await deleteNotification(notificationId);
+    } catch (error) {
+      const apiError = getApiError(error, 'Failed to delete notification');
+      setNotifications(snapshot);
+      setNotificationsError(apiError.message);
+    } finally {
+      setDeletingNotificationId('');
+    }
   };
 
   const handleLogout = () => {
@@ -91,9 +221,14 @@ export default function DashboardNavbar({ rsvpCount }) {
           <div className="relative">
             <button 
               onClick={() => {
-                setNotificationsOpen(!notificationsOpen);
-                if (!notificationsOpen) setProfileOpen(false);
+                const nextOpen = !notificationsOpen;
+                setNotificationsOpen(nextOpen);
+                if (nextOpen) {
+                  setProfileOpen(false);
+                  fetchNotifications();
+                }
               }}
+              aria-label="Notifications"
               className="relative p-2 text-slate-600 hover:text-slate-900 transition-colors"
             >
               <Bell className="w-6 h-6" />
@@ -105,7 +240,7 @@ export default function DashboardNavbar({ rsvpCount }) {
             </button>
 
             {notificationsOpen && (
-              <div className="absolute right-0 mt-2 w-80 bg-white rounded-2xl shadow-xl border border-slate-200 py-2 z-50 max-h-[420px] overflow-auto">
+              <div className="absolute right-0 mt-2 w-80 bg-white rounded-2xl shadow-xl border border-slate-200 py-2 z-50 max-h-105 overflow-auto">
                 <div className="px-6 py-3 border-b flex items-center justify-between">
                   <h3 className="font-semibold">Notifications</h3>
                   {unreadCount > 0 && (
@@ -115,17 +250,44 @@ export default function DashboardNavbar({ rsvpCount }) {
                   )}
                 </div>
 
-                {notifications.length === 0 ? (
+                {notificationsLoading ? (
+                  <p className="text-center py-8 text-slate-500">Loading notifications...</p>
+                ) : notificationsError ? (
+                  <div className="px-6 py-5">
+                    <p className="text-sm text-red-600">{notificationsError}</p>
+                    <button onClick={fetchNotifications} className="mt-2 text-xs text-blue-600 hover:underline">
+                      Retry
+                    </button>
+                  </div>
+                ) : notifications.length === 0 ? (
                   <p className="text-center py-8 text-slate-500">No new notifications</p>
                 ) : (
                   notifications.map(notif => (
                     <div 
                       key={notif.id}
-                      onClick={() => handleNotificationClick(notif.eventId)}
+                      onClick={() => handleNotificationClick(notif)}
                       className={`px-6 py-4 hover:bg-slate-50 cursor-pointer border-b last:border-b-0 ${!notif.read ? 'bg-blue-50' : ''}`}
                     >
-                      <p className="text-sm text-slate-700">{notif.message}</p>
-                      <p className="text-xs text-slate-500 mt-1">{notif.time}</p>
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="min-w-0">
+                          <p className="text-xs uppercase tracking-wide text-slate-500">{notif.title}</p>
+                          <p className="text-sm text-slate-700">{notif.message}</p>
+                          <p className="text-xs text-slate-500 mt-1">{formatNotificationTime(notif.created_at)}</p>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            handleDeleteNotification(notif.id);
+                          }}
+                          disabled={deletingNotificationId === notif.id}
+                          className="shrink-0 rounded-full p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 disabled:opacity-50"
+                          aria-label="Delete notification"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
                   ))
                 )}
@@ -140,6 +302,7 @@ export default function DashboardNavbar({ rsvpCount }) {
                 setProfileOpen(!profileOpen);
                 if (!profileOpen) setNotificationsOpen(false);
               }}
+              aria-label="Profile menu"
               className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white font-semibold hover:bg-blue-700 transition-colors"
             >
               {user?.name?.charAt(0) || 'H'}
@@ -164,13 +327,17 @@ export default function DashboardNavbar({ rsvpCount }) {
                   <Calendar className="w-5 h-5" /> My Schedule
                 </Link>
 
-                <button onClick={() => { setProfileOpen(false); setShowSettingsModal(true); }} className="flex items-center gap-3 w-full px-6 py-4 hover:bg-slate-100 text-left">
+                <Link to="/profile-settings" onClick={() => setProfileOpen(false)} className="flex items-center gap-3 px-6 py-4 hover:bg-slate-100">
                   <Settings className="w-5 h-5" /> Profile Settings
-                </button>
+                </Link>
 
-                <button onClick={() => { setProfileOpen(false); setShowHelpModal(true); }} className="flex items-center gap-3 w-full px-6 py-4 hover:bg-slate-100 text-left">
+                <a
+                  href="mailto:support@campusvibe.edu.et"
+                  onClick={() => setProfileOpen(false)}
+                  className="flex items-center gap-3 px-6 py-4 hover:bg-slate-100"
+                >
                   <HelpCircle className="w-5 h-5" /> Help & Support
-                </button>
+                </a>
 
                 <div className="border-t my-2"></div>
 
@@ -185,6 +352,7 @@ export default function DashboardNavbar({ rsvpCount }) {
           <button 
             className="md:hidden p-2 text-slate-600 hover:text-slate-900"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            aria-label="Toggle mobile menu"
           >
             {mobileMenuOpen ? <X className="w-7 h-7" /> : <Menu className="w-7 h-7" />}
           </button>
@@ -196,34 +364,6 @@ export default function DashboardNavbar({ rsvpCount }) {
         <div className="md:hidden absolute top-full left-0 w-full bg-white border-b shadow-xl px-6 py-6 flex flex-col gap-5 z-10 animate-in slide-in-from-top-2">
           <Link to="/dashboard" onClick={() => setMobileMenuOpen(false)} className="text-lg font-medium hover:text-blue-600">Events Feed</Link>
           <div className="text-lg font-medium text-slate-500">You have {rsvpCount} active RSVPs</div>
-        </div>
-      )}
-
-      {/* Modals */}
-      {showSettingsModal && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[60]">
-          <div className="bg-white rounded-3xl p-8 max-w-md w-full mx-4">
-            <h2 className="text-2xl font-bold mb-6">Profile Settings</h2>
-            <p className="text-slate-600 mb-8">Profile editing coming soon.</p>
-            <button onClick={() => setShowSettingsModal(false)} className="w-full bg-blue-600 text-white py-4 rounded-2xl font-medium hover:bg-blue-700">
-              Close
-            </button>
-          </div>
-        </div>
-      )}
-
-      {showHelpModal && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[60]">
-          <div className="bg-white rounded-3xl p-8 max-w-md w-full mx-4">
-            <h2 className="text-2xl font-bold mb-6">Help & Support</h2>
-            <div className="space-y-4 text-slate-600">
-              <p>Email: support@campusvibe.edu.et</p>
-              <p>Phone: +251 911 234 567</p>
-            </div>
-            <button onClick={() => setShowHelpModal(false)} className="mt-8 w-full bg-blue-600 text-white py-4 rounded-2xl font-medium hover:bg-blue-700">
-              Close
-            </button>
-          </div>
         </div>
       )}
     </nav>
