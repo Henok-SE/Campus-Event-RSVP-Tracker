@@ -10,6 +10,7 @@ const Student = require("./models/student");
 const authRoutes = require("./routes/authRoutes");
 const eventRoutes = require("./routes/eventRoutes");
 const rsvpRoutes = require("./routes/rsvpRoutes");
+const notificationRoutes = require("./routes/notificationRoutes");
 
 const app = express();
 const config = getConfig();
@@ -55,6 +56,7 @@ app.get("/api/health", (req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/events", eventRoutes);
 app.use("/api/rsvp", rsvpRoutes);
+app.use("/api/notifications", notificationRoutes);
 
 app.use((req, res) => {
   return sendError(res, {

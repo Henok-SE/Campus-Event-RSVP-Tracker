@@ -12,6 +12,7 @@ const Student = require("../models/student");
 const User = require("../models/users");
 const Event = require("../models/event");
 const RSVP = require("../models/rsvp");
+const Notification = require("../models/notification");
 const AuthAudit = require("../models/authAudit");
 const { app, connectDB } = require("../server");
 
@@ -25,6 +26,7 @@ describe("Backend integration tests", () => {
   });
 
   beforeEach(async () => {
+    await Notification.deleteMany({});
     await RSVP.deleteMany({});
     await Event.deleteMany({});
     await User.deleteMany({});
@@ -208,5 +210,111 @@ describe("Backend integration tests", () => {
 
     expect(remainingEvent).toBeNull();
     expect(remainingRsvps).toBe(0);
+  });
+
+  test("notifications API supports CRUD read flows", async () => {
+    const hashed = await bcrypt.hash("pass1234", 10);
+
+    const user = await User.create({
+      name: "Notify User",
+      email: "notify@example.com",
+      student_id: "3301/18",
+      password: hashed,
+      role: "Student"
+    });
+
+    const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET);
+
+    const createRes = await request(app)
+      .post("/api/notifications")
+      .set("Authorization", `Bearer ${token}`)
+      .send({
+        type: "reminder",
+        title: "Reminder",
+        message: "Your event starts in 1 hour"
+      });
+
+    expect(createRes.status).toBe(201);
+    expect(createRes.body.success).toBe(true);
+    expect(createRes.body.data.read).toBe(false);
+
+    const notificationId = createRes.body.data.id;
+
+    const listRes = await request(app)
+      .get("/api/notifications")
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(listRes.status).toBe(200);
+    expect(Array.isArray(listRes.body.data)).toBe(true);
+    expect(listRes.body.data).toHaveLength(1);
+
+    const readRes = await request(app)
+      .patch(`/api/notifications/${notificationId}/read`)
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(readRes.status).toBe(200);
+    expect(readRes.body.data.read).toBe(true);
+
+    await request(app)
+      .post("/api/notifications")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ message: "Second message" });
+
+    const readAllRes = await request(app)
+      .patch("/api/notifications/read-all")
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(readAllRes.status).toBe(200);
+    expect(readAllRes.body.data.updated_count).toBeGreaterThanOrEqual(1);
+
+    const deleteRes = await request(app)
+      .delete(`/api/notifications/${notificationId}`)
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(deleteRes.status).toBe(200);
+    expect(deleteRes.body.success).toBe(true);
+  });
+
+  test("RSVP create and cancel generate notifications", async () => {
+    const hashed = await bcrypt.hash("pass1234", 10);
+
+    const user = await User.create({
+      name: "RSVP User",
+      email: "rsvp-user@example.com",
+      student_id: "3302/18",
+      password: hashed,
+      role: "Student"
+    });
+
+    const event = await Event.create({
+      title: "Campus Music Night",
+      status: "Published",
+      capacity: 20,
+      created_by: user._id,
+      attending_count: 0
+    });
+
+    const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET);
+
+    const createRsvpRes = await request(app)
+      .post("/api/rsvp")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ event_id: event._id.toString() });
+
+    expect(createRsvpRes.status).toBe(201);
+
+    let notifications = await Notification.find({ user_id: user._id }).sort({ created_at: -1 });
+    expect(notifications.length).toBe(1);
+    expect(notifications[0].title).toBe("RSVP confirmed");
+
+    const cancelRsvpRes = await request(app)
+      .delete(`/api/rsvp/${event._id}`)
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(cancelRsvpRes.status).toBe(200);
+
+    notifications = await Notification.find({ user_id: user._id }).sort({ created_at: -1 });
+    expect(notifications.length).toBe(2);
+    expect(notifications[0].title).toBe("RSVP cancelled");
   });
 });

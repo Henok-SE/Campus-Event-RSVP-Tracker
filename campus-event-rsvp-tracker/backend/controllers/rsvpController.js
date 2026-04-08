@@ -1,11 +1,26 @@
 const mongoose = require("mongoose");
 const RSVP = require("../models/rsvp");
 const Event = require("../models/event");
+const Notification = require("../models/notification");
 const { sendSuccess, sendError } = require("../utils/apiResponse");
 
 const CLOSED_EVENT_STATUSES = ["Cancelled", "Completed"];
 
 const isClosedStatus = (status) => CLOSED_EVENT_STATUSES.includes(status);
+
+const createNotificationSafely = async ({ user_id, type, title, message, event_id = null }) => {
+  try {
+    await Notification.create({
+      user_id,
+      type,
+      title,
+      message,
+      event_id
+    });
+  } catch (error) {
+    // Notification failures must not block RSVP flow.
+  }
+};
 
 exports.createRsvp = async (req, res) => {
   let incrementedAttendance = false;
@@ -109,6 +124,14 @@ exports.createRsvp = async (req, res) => {
 
     await rsvp.save();
 
+    await createNotificationSafely({
+      user_id: req.user.id,
+      type: "success",
+      title: "RSVP confirmed",
+      message: `You are confirmed for ${event.title || "this event"}`,
+      event_id
+    });
+
     return sendSuccess(res, {
       status: 201,
       message: "RSVP created",
@@ -175,6 +198,16 @@ exports.cancelRsvp = async (req, res) => {
       { _id: eventId, attending_count: { $gt: 0 } },
       { $inc: { attending_count: -1 } }
     );
+
+    const event = await Event.findById(eventId).select("title");
+
+    await createNotificationSafely({
+      user_id: req.user.id,
+      type: "info",
+      title: "RSVP cancelled",
+      message: `You cancelled your RSVP for ${event?.title || "an event"}`,
+      event_id: eventId
+    });
 
     return sendSuccess(res, {
       status: 200,

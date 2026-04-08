@@ -62,6 +62,10 @@ jest.mock("../models/authAudit", () => ({
   create: jest.fn().mockResolvedValue(undefined)
 }));
 
+jest.mock("../models/notification", () => ({
+  create: jest.fn().mockResolvedValue(undefined)
+}));
+
 const User = require("../models/users");
 const Student = require("../models/student");
 const Event = require("../models/event");
@@ -387,6 +391,9 @@ describe("Backend API smoke tests", () => {
     const eventId = new mongoose.Types.ObjectId().toString();
 
     RSVP.findOneAndDelete.mockResolvedValue({ _id: "rsvp-1" });
+    Event.findById.mockReturnValue({
+      select: jest.fn().mockResolvedValue({ _id: eventId, title: "Hackathon" })
+    });
 
     const res = await request(app)
       .delete(`/api/rsvp/${eventId}`)
