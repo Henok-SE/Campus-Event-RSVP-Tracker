@@ -1,10 +1,11 @@
 // src/context/AuthContext.jsx
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import {
   clearAuthToken,
   getApiError,
   getCurrentUser,
   loginUser,
+  registerUnauthorizedHandler,
   registerUser,
   setAuthToken,
   updateCurrentUser
@@ -34,6 +35,28 @@ export function AuthProvider({ children }) {
   const [isAuthLoading, setIsAuthLoading] = useState(true);
 
   const isLoggedIn = Boolean(token && user);
+
+  const resetAuthState = useCallback(() => {
+    clearAuthToken();
+    localStorage.removeItem(AUTH_TOKEN_STORAGE_KEY);
+    localStorage.removeItem(AUTH_USER_STORAGE_KEY);
+    setToken(null);
+    setUser(null);
+  }, []);
+
+  const logout = useCallback(() => {
+    resetAuthState();
+  }, [resetAuthState]);
+
+  useEffect(() => {
+    const unsubscribe = registerUnauthorizedHandler(() => {
+      resetAuthState();
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [resetAuthState]);
 
   useEffect(() => {
     let isMounted = true;
@@ -68,11 +91,7 @@ export function AuthProvider({ children }) {
           return;
         }
 
-        clearAuthToken();
-        localStorage.removeItem(AUTH_TOKEN_STORAGE_KEY);
-        localStorage.removeItem(AUTH_USER_STORAGE_KEY);
-        setToken(null);
-        setUser(null);
+        resetAuthState();
       } finally {
         if (isMounted) {
           setIsAuthLoading(false);
@@ -85,7 +104,7 @@ export function AuthProvider({ children }) {
     return () => {
       isMounted = false;
     };
-  }, [token]);
+  }, [token, resetAuthState]);
 
   const login = async ({ student_id, password }) => {
     try {
@@ -116,14 +135,6 @@ export function AuthProvider({ children }) {
     } catch (error) {
       throw getApiError(error, 'Registration failed');
     }
-  };
-
-  const logout = () => {
-    clearAuthToken();
-    localStorage.removeItem(AUTH_TOKEN_STORAGE_KEY);
-    localStorage.removeItem(AUTH_USER_STORAGE_KEY);
-    setToken(null);
-    setUser(null);
   };
 
   const updateProfile = async (payload) => {

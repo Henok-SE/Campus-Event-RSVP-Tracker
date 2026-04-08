@@ -33,7 +33,6 @@ function App() {
             </ProtectedRoute>
           )}
         />
-        {/* <Route path="/event/:id" element={<EventDetails />} /> */}
         <Route
           path="/profile-settings"
           element={(

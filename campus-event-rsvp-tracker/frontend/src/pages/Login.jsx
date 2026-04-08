@@ -1,6 +1,5 @@
 // src/pages/Login.jsx
 import { useAuth } from '../context/AuthContext';
-import { useToast } from '../context/ToastContext';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useEffect, useMemo, useState } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
@@ -10,7 +9,6 @@ const normalizeStudentId = (value = '') => value.trim().replace(/\s+/g, '');
 
 export default function Login() {
   const { isAuthLoading, isLoggedIn, login, register } = useAuth();
-  const toast = useToast();
   const navigate = useNavigate();
   const location = useLocation();
   const [mode, setMode] = useState('login');
@@ -187,13 +185,12 @@ export default function Login() {
                     <div className="flex items-center justify-between mb-2">
                       <label className="block text-sm font-medium">Password</label>
                       {mode === 'login' && (
-                        <button 
-                          type="button" 
-                          onClick={() => toast.success("Please check your student email for a reset link.")}
+                        <a
+                          href="mailto:support@campusvibe.edu.et?subject=CampusVibe%20Password%20Reset%20Request"
                           className="text-sm font-medium text-blue-600 hover:underline"
                         >
                           Forgot password?
-                        </button>
+                        </a>
                       )}
                     </div>
                     <div className="relative">

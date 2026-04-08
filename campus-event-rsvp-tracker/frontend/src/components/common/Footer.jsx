@@ -1,4 +1,6 @@
 // src/components/common/Footer.jsx
+import { Link } from 'react-router-dom';
+
 export default function Footer() {
   return (
     <footer className="bg-[#1E3A8A] text-white pt-16 pb-8">
@@ -19,10 +21,10 @@ export default function Footer() {
         <div>
           <h4 className="font-semibold text-lg mb-6">Quick Links</h4>
           <div className="space-y-3 text-sm">
-            <a href="/events" className="block hover:text-white transition-colors">Browse Events</a>
-            <a href="/my-rsvps" className="block hover:text-white transition-colors">My Schedule</a>
-            <a href="/organizer" className="block hover:text-white transition-colors">Submit an Event</a>
-            <a href="#" className="block hover:text-white transition-colors">Help & FAQ</a>
+            <Link to="/events" className="block hover:text-white transition-colors">Browse Events</Link>
+            <Link to="/my-schedule" className="block hover:text-white transition-colors">My Schedule</Link>
+            <Link to="/create-event" className="block hover:text-white transition-colors">Submit an Event</Link>
+            <a href="mailto:support@campusvibe.edu.et" className="block hover:text-white transition-colors">Help & FAQ</a>
           </div>
         </div>
 
