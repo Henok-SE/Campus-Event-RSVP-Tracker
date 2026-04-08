@@ -7,6 +7,8 @@ const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 const mongoose = require("mongoose");
 const { MongoMemoryServer } = require("mongodb-memory-server");
+const fs = require("fs");
+const path = require("path");
 
 const Student = require("../models/student");
 const User = require("../models/users");
@@ -17,6 +19,19 @@ const AuthAudit = require("../models/authAudit");
 const { app, connectDB } = require("../server");
 
 let mongoServer;
+
+const removeUploadedFile = (filePath = "") => {
+  const normalizedPath = String(filePath).replace(/^\/+/, "");
+
+  if (!normalizedPath) {
+    return;
+  }
+
+  const absolutePath = path.join(__dirname, "..", normalizedPath);
+  if (fs.existsSync(absolutePath)) {
+    fs.unlinkSync(absolutePath);
+  }
+};
 
 describe("Backend integration tests", () => {
   beforeAll(async () => {
@@ -212,13 +227,177 @@ describe("Backend integration tests", () => {
     expect(remainingRsvps).toBe(0);
   });
 
+  test("PATCH /api/auth/me updates the authenticated user profile", async () => {
+    const hashed = await bcrypt.hash("pass1234", 10);
+
+    const user = await User.create({
+      name: "Before Name",
+      email: "before@example.com",
+      student_id: "3301/18",
+      password: hashed,
+      role: "Student"
+    });
+
+    const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET);
+
+    const updateRes = await request(app)
+      .patch("/api/auth/me")
+      .set("Authorization", `Bearer ${token}`)
+      .send({
+        name: "After Name",
+        email: "AFTER@EXAMPLE.COM"
+      });
+
+    expect(updateRes.status).toBe(200);
+    expect(updateRes.body.success).toBe(true);
+    expect(updateRes.body.data.name).toBe("After Name");
+    expect(updateRes.body.data.email).toBe("after@example.com");
+
+    const updated = await User.findById(user._id);
+    expect(updated.name).toBe("After Name");
+    expect(updated.email).toBe("after@example.com");
+  });
+
+  test("PATCH /api/auth/me returns 409 for duplicate email", async () => {
+    const hashed = await bcrypt.hash("pass1234", 10);
+
+    const user1 = await User.create({
+      name: "User One",
+      email: "one-update@example.com",
+      student_id: "3302/18",
+      password: hashed,
+      role: "Student"
+    });
+
+    await User.create({
+      name: "User Two",
+      email: "taken-update@example.com",
+      student_id: "3303/18",
+      password: hashed,
+      role: "Student"
+    });
+
+    const token = jwt.sign({ id: user1._id, role: user1.role }, process.env.JWT_SECRET);
+
+    const updateRes = await request(app)
+      .patch("/api/auth/me")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ email: "taken-update@example.com" });
+
+    expect(updateRes.status).toBe(409);
+    expect(updateRes.body.error.code).toBe("DUPLICATE_ENTRY");
+  });
+
+  test("PATCH /api/auth/me validates payload", async () => {
+    const hashed = await bcrypt.hash("pass1234", 10);
+
+    const user = await User.create({
+      name: "User Three",
+      email: "three@example.com",
+      student_id: "3304/18",
+      password: hashed,
+      role: "Student"
+    });
+
+    const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET);
+
+    const updateRes = await request(app)
+      .patch("/api/auth/me")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ email: "bad-email" });
+
+    expect(updateRes.status).toBe(400);
+    expect(updateRes.body.error.code).toBe("VALIDATION_ERROR");
+  });
+
+  test("POST /api/events/upload-image uploads image for authenticated user", async () => {
+    const hashed = await bcrypt.hash("pass1234", 10);
+
+    const user = await User.create({
+      name: "Uploader",
+      email: "uploader@example.com",
+      student_id: "3305/18",
+      password: hashed,
+      role: "Student"
+    });
+
+    const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET);
+
+    const uploadRes = await request(app)
+      .post("/api/events/upload-image")
+      .set("Authorization", `Bearer ${token}`)
+      .attach("image", Buffer.from("png-binary"), "poster.png");
+
+    expect(uploadRes.status).toBe(201);
+    expect(uploadRes.body.success).toBe(true);
+    expect(uploadRes.body.data.image_url).toContain("/uploads/events/");
+    expect(uploadRes.body.data.file_path).toContain("/uploads/events/");
+
+    removeUploadedFile(uploadRes.body.data.file_path);
+  });
+
+  test("POST /api/events/upload-image rejects unauthenticated request", async () => {
+    const uploadRes = await request(app)
+      .post("/api/events/upload-image")
+      .attach("image", Buffer.from("png-binary"), "poster.png");
+
+    expect(uploadRes.status).toBe(401);
+    expect(uploadRes.body.error.code).toBe("UNAUTHORIZED");
+  });
+
+  test("POST /api/events/upload-image rejects unsupported mime types", async () => {
+    const hashed = await bcrypt.hash("pass1234", 10);
+
+    const user = await User.create({
+      name: "Uploader Two",
+      email: "uploader2@example.com",
+      student_id: "3306/18",
+      password: hashed,
+      role: "Student"
+    });
+
+    const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET);
+
+    const uploadRes = await request(app)
+      .post("/api/events/upload-image")
+      .set("Authorization", `Bearer ${token}`)
+      .attach("image", Buffer.from("plain-text"), "notes.txt");
+
+    expect(uploadRes.status).toBe(400);
+    expect(uploadRes.body.error.code).toBe("UPLOAD_ERROR");
+  });
+
+  test("POST /api/events/upload-image enforces size limits", async () => {
+    const hashed = await bcrypt.hash("pass1234", 10);
+
+    const user = await User.create({
+      name: "Uploader Three",
+      email: "uploader3@example.com",
+      student_id: "3307/18",
+      password: hashed,
+      role: "Student"
+    });
+
+    const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET);
+    const oversizedFile = Buffer.alloc(5 * 1024 * 1024 + 1, 1);
+
+    const uploadRes = await request(app)
+      .post("/api/events/upload-image")
+      .set("Authorization", `Bearer ${token}`)
+      .attach("image", oversizedFile, "big.jpg");
+
+    expect(uploadRes.status).toBe(400);
+    expect(uploadRes.body.error.code).toBe("UPLOAD_ERROR");
+    expect(uploadRes.body.error.message).toBe("Image size must be 5MB or less");
+  });
+
   test("notifications API supports CRUD read flows", async () => {
     const hashed = await bcrypt.hash("pass1234", 10);
 
     const user = await User.create({
       name: "Notify User",
       email: "notify@example.com",
-      student_id: "3301/18",
+      student_id: "3308/18",
       password: hashed,
       role: "Student"
     });
@@ -281,7 +460,7 @@ describe("Backend integration tests", () => {
     const user = await User.create({
       name: "RSVP User",
       email: "rsvp-user@example.com",
-      student_id: "3302/18",
+      student_id: "3309/18",
       password: hashed,
       role: "Student"
     });

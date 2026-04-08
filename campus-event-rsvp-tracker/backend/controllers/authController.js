@@ -380,7 +380,7 @@ exports.updateMe = async (req, res) => {
     const user = await User.findByIdAndUpdate(
       req.user.id,
       { $set: updates },
-      { new: true, runValidators: true }
+      { returnDocument: "after", runValidators: true }
     ).select("_id name email student_id role");
 
     if (!user) {

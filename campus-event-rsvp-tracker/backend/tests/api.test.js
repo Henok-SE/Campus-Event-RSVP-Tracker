@@ -257,7 +257,7 @@ describe("Backend API smoke tests", () => {
     expect(User.findByIdAndUpdate).toHaveBeenCalledWith(
       "507f1f77bcf86cd799439011",
       { $set: { name: "Jane Updated", email: "updated@example.com" } },
-      { new: true, runValidators: true }
+      { returnDocument: "after", runValidators: true }
     );
   });
 
