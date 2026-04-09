@@ -391,6 +391,196 @@ describe("Backend integration tests", () => {
     expect(uploadRes.body.error.message).toBe("Image size must be 5MB or less");
   });
 
+  test("student-created events are pending and hidden from public listing", async () => {
+    const hashed = await bcrypt.hash("pass1234", 10);
+
+    const student = await User.create({
+      name: "Student Creator",
+      email: "student.creator@example.com",
+      student_id: "3310/18",
+      password: hashed,
+      role: "Student"
+    });
+
+    const studentToken = jwt.sign({ id: student._id, role: student.role }, process.env.JWT_SECRET);
+
+    const createRes = await request(app)
+      .post("/api/events")
+      .set("Authorization", `Bearer ${studentToken}`)
+      .send({
+        title: "Student Pending Event",
+        description: "Needs review",
+        status: "Published"
+      });
+
+    expect(createRes.status).toBe(201);
+    expect(createRes.body.success).toBe(true);
+    expect(createRes.body.data.status).toBe("Pending");
+
+    const createdEventId = createRes.body.data._id;
+
+    const publicListRes = await request(app).get("/api/events");
+    expect(publicListRes.status).toBe(200);
+    expect(publicListRes.body.data).toHaveLength(0);
+
+    const ownerListRes = await request(app)
+      .get("/api/events")
+      .set("Authorization", `Bearer ${studentToken}`);
+
+    expect(ownerListRes.status).toBe(200);
+    expect(ownerListRes.body.data).toHaveLength(1);
+    expect(ownerListRes.body.data[0].status).toBe("Pending");
+
+    const publicDetailRes = await request(app).get(`/api/events/${createdEventId}`);
+    expect(publicDetailRes.status).toBe(404);
+
+    const ownerDetailRes = await request(app)
+      .get(`/api/events/${createdEventId}`)
+      .set("Authorization", `Bearer ${studentToken}`);
+    expect(ownerDetailRes.status).toBe(200);
+    expect(ownerDetailRes.body.data.status).toBe("Pending");
+  });
+
+  test("admin can approve pending event and publish to public listings", async () => {
+    const hashed = await bcrypt.hash("pass1234", 10);
+
+    const admin = await User.create({
+      name: "Admin Reviewer",
+      email: "admin.reviewer@example.com",
+      student_id: "3311/18",
+      password: hashed,
+      role: "Admin"
+    });
+
+    const student = await User.create({
+      name: "Student Submitter",
+      email: "student.submitter@example.com",
+      student_id: "3312/18",
+      password: hashed,
+      role: "Student"
+    });
+
+    const adminToken = jwt.sign({ id: admin._id, role: admin.role }, process.env.JWT_SECRET);
+    const studentToken = jwt.sign({ id: student._id, role: student.role }, process.env.JWT_SECRET);
+
+    const createRes = await request(app)
+      .post("/api/events")
+      .set("Authorization", `Bearer ${studentToken}`)
+      .send({ title: "Moderation Queue Event" });
+
+    expect(createRes.status).toBe(201);
+    const eventId = createRes.body.data._id;
+
+    const pendingQueueRes = await request(app)
+      .get("/api/events/review/pending")
+      .set("Authorization", `Bearer ${adminToken}`);
+
+    expect(pendingQueueRes.status).toBe(200);
+    expect(pendingQueueRes.body.data).toHaveLength(1);
+
+    const approveRes = await request(app)
+      .patch(`/api/events/${eventId}/review`)
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ decision: "approve" });
+
+    expect(approveRes.status).toBe(200);
+    expect(approveRes.body.data.status).toBe("Published");
+
+    const publicListRes = await request(app).get("/api/events");
+    expect(publicListRes.status).toBe(200);
+    expect(publicListRes.body.data).toHaveLength(1);
+    expect(publicListRes.body.data[0].status).toBe("Published");
+  });
+
+  test("reject requires reason and creator can resubmit rejected events", async () => {
+    const hashed = await bcrypt.hash("pass1234", 10);
+
+    const admin = await User.create({
+      name: "Admin Reviewer Two",
+      email: "admin2@example.com",
+      student_id: "3313/18",
+      password: hashed,
+      role: "Admin"
+    });
+
+    const student = await User.create({
+      name: "Rejected Submitter",
+      email: "reject.submitter@example.com",
+      student_id: "3314/18",
+      password: hashed,
+      role: "Student"
+    });
+
+    const adminToken = jwt.sign({ id: admin._id, role: admin.role }, process.env.JWT_SECRET);
+    const studentToken = jwt.sign({ id: student._id, role: student.role }, process.env.JWT_SECRET);
+
+    const createRes = await request(app)
+      .post("/api/events")
+      .set("Authorization", `Bearer ${studentToken}`)
+      .send({ title: "Needs Changes Event", description: "v1" });
+
+    expect(createRes.status).toBe(201);
+    const eventId = createRes.body.data._id;
+
+    const rejectWithoutReasonRes = await request(app)
+      .patch(`/api/events/${eventId}/review`)
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ decision: "reject" });
+
+    expect(rejectWithoutReasonRes.status).toBe(400);
+    expect(rejectWithoutReasonRes.body.error.code).toBe("VALIDATION_ERROR");
+
+    const rejectWithReasonRes = await request(app)
+      .patch(`/api/events/${eventId}/review`)
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ decision: "reject", reason: "Please add detailed location and agenda" });
+
+    expect(rejectWithReasonRes.status).toBe(200);
+    expect(rejectWithReasonRes.body.data.status).toBe("Rejected");
+    expect(rejectWithReasonRes.body.data.rejection_reason).toBe("Please add detailed location and agenda");
+
+    const publicListRes = await request(app).get("/api/events");
+    expect(publicListRes.status).toBe(200);
+    expect(publicListRes.body.data).toHaveLength(0);
+
+    const ownerListRes = await request(app)
+      .get("/api/events")
+      .set("Authorization", `Bearer ${studentToken}`);
+    expect(ownerListRes.status).toBe(200);
+    expect(ownerListRes.body.data).toHaveLength(1);
+    expect(ownerListRes.body.data[0].status).toBe("Rejected");
+
+    const resubmitRes = await request(app)
+      .patch(`/api/events/${eventId}/resubmit`)
+      .set("Authorization", `Bearer ${studentToken}`)
+      .send({ description: "v2 with full agenda and room details" });
+
+    expect(resubmitRes.status).toBe(200);
+    expect(resubmitRes.body.data.status).toBe("Pending");
+    expect(resubmitRes.body.data.rejection_reason).toBeNull();
+  });
+
+  test("non-admin users cannot access admin moderation queue", async () => {
+    const hashed = await bcrypt.hash("pass1234", 10);
+
+    const student = await User.create({
+      name: "Non Admin",
+      email: "non-admin@example.com",
+      student_id: "3315/18",
+      password: hashed,
+      role: "Student"
+    });
+
+    const studentToken = jwt.sign({ id: student._id, role: student.role }, process.env.JWT_SECRET);
+
+    const queueRes = await request(app)
+      .get("/api/events/review/pending")
+      .set("Authorization", `Bearer ${studentToken}`);
+
+    expect(queueRes.status).toBe(403);
+    expect(queueRes.body.error.code).toBe("FORBIDDEN");
+  });
+
   test("notifications API supports CRUD read flows", async () => {
     const hashed = await bcrypt.hash("pass1234", 10);
 

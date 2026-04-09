@@ -46,8 +46,30 @@ min: 0
 
 status:{
 type:String,
-enum:["Draft", "Published", "Ongoing", "Completed", "Cancelled"],
+enum:["Draft", "Pending", "Rejected", "Published", "Ongoing", "Completed", "Cancelled"],
 default:"Draft"
+},
+
+submitted_at:{
+type:Date,
+default:Date.now
+},
+
+reviewed_by:{
+type:mongoose.Schema.Types.ObjectId,
+ref:"User",
+default:null
+},
+
+reviewed_at:{
+type:Date,
+default:null
+},
+
+rejection_reason:{
+type:String,
+trim:true,
+default:null
 },
 
 created_by:{

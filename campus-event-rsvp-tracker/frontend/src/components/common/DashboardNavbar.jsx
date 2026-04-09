@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { LogOut, Calendar, Settings, HelpCircle, Bell, Menu, X, Trash2 } from 'lucide-react';
+import { LogOut, Calendar, Settings, HelpCircle, Bell, Menu, X, Trash2, ClipboardCheck } from 'lucide-react';
 import {
   getApiError,
   deleteNotification,
@@ -331,6 +331,12 @@ export default function DashboardNavbar({ rsvpCount }) {
                   <Settings className="w-5 h-5" /> Profile Settings
                 </Link>
 
+                {user?.role === 'Admin' ? (
+                  <Link to="/admin/review" onClick={() => setProfileOpen(false)} className="flex items-center gap-3 px-6 py-4 hover:bg-slate-100">
+                    <ClipboardCheck className="w-5 h-5" /> Admin Review
+                  </Link>
+                ) : null}
+
                 <a
                   href="mailto:support@campusvibe.edu.et"
                   onClick={() => setProfileOpen(false)}
@@ -363,6 +369,9 @@ export default function DashboardNavbar({ rsvpCount }) {
       {mobileMenuOpen && (
         <div className="md:hidden absolute top-full left-0 w-full bg-white border-b shadow-xl px-6 py-6 flex flex-col gap-5 z-10 animate-in slide-in-from-top-2">
           <Link to="/dashboard" onClick={() => setMobileMenuOpen(false)} className="text-lg font-medium hover:text-blue-600">Events Feed</Link>
+          {user?.role === 'Admin' ? (
+            <Link to="/admin/review" onClick={() => setMobileMenuOpen(false)} className="text-lg font-medium hover:text-blue-600">Admin Review</Link>
+          ) : null}
           <div className="text-lg font-medium text-slate-500">You have {rsvpCount} active RSVPs</div>
         </div>
       )}

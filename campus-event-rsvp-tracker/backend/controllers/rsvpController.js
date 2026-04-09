@@ -5,6 +5,7 @@ const Notification = require("../models/notification");
 const { sendSuccess, sendError } = require("../utils/apiResponse");
 
 const CLOSED_EVENT_STATUSES = ["Cancelled", "Completed"];
+const RSVP_OPEN_STATUSES = ["Published", "Ongoing"];
 
 const isClosedStatus = (status) => CLOSED_EVENT_STATUSES.includes(status);
 
@@ -67,11 +68,11 @@ exports.createRsvp = async (req, res) => {
       });
     }
 
-    if (isClosedStatus(event.status)) {
+    if (isClosedStatus(event.status) || !RSVP_OPEN_STATUSES.includes(event.status)) {
       return sendError(res, {
         status: 409,
         code: "EVENT_UNAVAILABLE",
-        message: "Cannot RSVP to cancelled or completed events"
+        message: "RSVP is only available for published or ongoing events"
       });
     }
 
@@ -81,7 +82,7 @@ exports.createRsvp = async (req, res) => {
       updatedEvent = await Event.findOneAndUpdate(
         {
           _id: event_id,
-          status: { $nin: CLOSED_EVENT_STATUSES },
+          status: { $in: RSVP_OPEN_STATUSES },
           $expr: { $lt: [{ $ifNull: ["$attending_count", 0] }, event.capacity] }
         },
         { $inc: { attending_count: 1 } },
@@ -99,7 +100,7 @@ exports.createRsvp = async (req, res) => {
       updatedEvent = await Event.findOneAndUpdate(
         {
           _id: event_id,
-          status: { $nin: CLOSED_EVENT_STATUSES }
+          status: { $in: RSVP_OPEN_STATUSES }
         },
         { $inc: { attending_count: 1 } },
         { returnDocument: "after" }

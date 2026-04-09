@@ -9,6 +9,23 @@ import { getEvents, getMyRSVPs, rsvpEvent, cancelRsvp, getApiError } from '../se
 import { mapApiEvent } from '../utils/eventAdapter';
 
 const DEFAULT_CATEGORIES = ['Sports', 'Arts', 'Academic', 'Social', 'Free Food', 'Tech'];
+const RSVP_OPEN_STATUSES = new Set(['Published', 'Ongoing']);
+
+const isEventRsvpAvailable = (event) => {
+  if (!event) {
+    return false;
+  }
+
+  if (!RSVP_OPEN_STATUSES.has(event.status)) {
+    return false;
+  }
+
+  if (Number.isInteger(event.capacity) && event.capacity > 0 && event.attending >= event.capacity) {
+    return false;
+  }
+
+  return true;
+};
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -152,6 +169,11 @@ export default function Dashboard() {
     const currentEvent = events.find((event) => event.id === eventId);
 
     if (!currentEvent || pendingEventId) {
+      return;
+    }
+
+    if (currentEvent.rsvpStatus !== 'rsvpd' && !isEventRsvpAvailable(currentEvent)) {
+      setErrorMessage('RSVP is unavailable until this event is published and has open spots.');
       return;
     }
 
@@ -339,14 +361,16 @@ export default function Dashboard() {
 
                       <button
                         onClick={() => event.rsvpStatus !== "rsvpd" && handleRSVPAction(event.id)}
-                        disabled={event.rsvpStatus === "rsvpd"}
+                        disabled={event.rsvpStatus === "rsvpd" || !isEventRsvpAvailable(event)}
                         className={`flex-1 py-3.5 rounded-2xl font-medium text-sm transition-all ${
                           event.rsvpStatus === "rsvpd" 
                             ? "bg-slate-100 text-slate-500 cursor-not-allowed" 
-                            : "bg-blue-600 hover:bg-blue-700 text-white"
+                            : !isEventRsvpAvailable(event)
+                              ? "bg-slate-100 text-slate-500 cursor-not-allowed"
+                              : "bg-blue-600 hover:bg-blue-700 text-white"
                         }`}
                       >
-                        {event.rsvpStatus === "rsvpd" ? "RSVP'd" : "Count Me In"}
+                        {event.rsvpStatus === "rsvpd" ? "RSVP'd" : isEventRsvpAvailable(event) ? "Count Me In" : "RSVP Unavailable"}
                       </button>
                     </div>
                   </div>

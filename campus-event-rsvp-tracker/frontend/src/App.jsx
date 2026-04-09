@@ -9,6 +9,7 @@ import EventDetails from './pages/EventDetails';
 import ProfileSettings from './pages/ProfileSettings';
 import MySchedule from './pages/MySchedule';
 import CreateEvent from './pages/CreateEvent';
+import AdminEventReview from './pages/AdminEventReview';
 import NotFound from './pages/NotFound';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import { ToastProvider } from './context/ToastContext';
@@ -55,6 +56,14 @@ function App() {
           element={(
             <ProtectedRoute>
               <CreateEvent />
+            </ProtectedRoute>
+          )}
+        />
+        <Route
+          path="/admin/review"
+          element={(
+            <ProtectedRoute requiredRole="Admin">
+              <AdminEventReview />
             </ProtectedRoute>
           )}
         />
