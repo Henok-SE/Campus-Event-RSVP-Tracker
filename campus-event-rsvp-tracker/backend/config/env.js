@@ -1,7 +1,7 @@
 const path = require("path");
 const dotenv = require("dotenv");
 
-const DEFAULT_PORT = 5000;
+const DEFAULT_PORT = 5050;
 const DEFAULT_MONGODB_URI = "mongodb://127.0.0.1:27017/eventDB";
 const DEFAULT_FRONTEND_ORIGINS = "http://localhost:5173";
 const REQUIRED_VARS = ["JWT_SECRET"];

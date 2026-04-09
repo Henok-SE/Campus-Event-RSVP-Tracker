@@ -129,9 +129,9 @@ export function AuthProvider({ children }) {
     }
   };
 
-  const register = async ({ name, email, student_id, password }) => {
+  const register = async ({ student_id, password }) => {
     try {
-      await registerUser({ name, email, student_id, password });
+      await registerUser({ student_id, password });
     } catch (error) {
       throw getApiError(error, 'Registration failed');
     }

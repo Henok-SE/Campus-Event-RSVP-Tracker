@@ -89,6 +89,7 @@ const normalizeId = (event) => {
 
 export const mapApiEvent = (event = {}, { rsvpSet = new Set() } = {}) => {
   const id = normalizeId(event);
+  const createdBy = event?.created_by?._id ?? event?.created_by ?? null;
   const tags = normalizeTags(event.tags, event.category);
   const category = event.category || tags[0] || DEFAULT_CATEGORY;
   const attending = Number.isInteger(event.attending)
@@ -120,6 +121,7 @@ export const mapApiEvent = (event = {}, { rsvpSet = new Set() } = {}) => {
     status: event.status || "Draft",
     image: event.image_url || `https://picsum.photos/seed/${id || "event"}/2000/1200`,
     organizer: event.organizer || "Campus Organization",
+    createdBy: createdBy ? String(createdBy) : null,
     rsvpStatus: rsvpSet.has(id) ? "rsvpd" : "available"
   };
 };

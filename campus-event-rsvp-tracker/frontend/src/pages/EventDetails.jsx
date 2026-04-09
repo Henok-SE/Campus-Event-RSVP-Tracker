@@ -4,18 +4,19 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { MapPin, Users, Clock } from 'lucide-react';
 import Footer from '../components/common/Footer';
-import { cancelRsvp, getApiError, getEventById, getMyRSVPs, rsvpEvent } from '../services/api';
+import { cancelRsvp, deleteEvent, getApiError, getEventById, getMyRSVPs, rsvpEvent } from '../services/api';
 import { mapApiEvent } from '../utils/eventAdapter';
 
 export default function EventDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { isLoggedIn } = useAuth();
+  const { isLoggedIn, user } = useAuth();
 
   const [event, setEvent] = useState(null);
   const [rsvpStatus, setRsvpStatus] = useState('none'); // 'none' | 'confirmed'
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [actionErrorMessage, setActionErrorMessage] = useState('');
 
@@ -128,6 +129,35 @@ export default function EventDetails() {
     }
   };
 
+  const handleDeleteEvent = async () => {
+    if (!isLoggedIn) {
+      navigate(`/login?redirect=${encodeURIComponent(`/event/${id}`)}`);
+      return;
+    }
+
+    if (!event || deleteLoading) {
+      return;
+    }
+
+    const confirmed = window.confirm('Delete this event permanently? This action cannot be undone.');
+    if (!confirmed) {
+      return;
+    }
+
+    setActionErrorMessage('');
+    setDeleteLoading(true);
+
+    try {
+      await deleteEvent(event.id);
+      navigate('/dashboard', { replace: true });
+    } catch (error) {
+      const apiError = getApiError(error, 'Failed to delete event');
+      setActionErrorMessage(apiError.message);
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -150,6 +180,7 @@ export default function EventDetails() {
   const isFull = event.capacity > 0 && event.attending >= event.capacity;
   const canRSVP = rsvpStatus === 'none' && !isFull && !isClosed;
   const isConfirmed = rsvpStatus === 'confirmed';
+  const isOwner = Boolean(user?.id && event?.createdBy && String(user.id) === String(event.createdBy));
 
   return (
     <div className="bg-gray-50 min-h-screen">
@@ -249,6 +280,16 @@ export default function EventDetails() {
                   className="px-10 py-5 rounded-2xl font-medium text-red-600 border border-red-200 hover:bg-red-50 disabled:opacity-60 transition-colors"
                 >
                   {actionLoading ? 'Saving...' : 'Cancel RSVP'}
+                </button>
+              )}
+
+              {isOwner && (
+                <button
+                  onClick={handleDeleteEvent}
+                  disabled={deleteLoading}
+                  className="px-10 py-5 rounded-2xl font-medium text-red-700 border border-red-300 hover:bg-red-50 disabled:opacity-60 transition-colors"
+                >
+                  {deleteLoading ? 'Deleting...' : 'Delete Event'}
                 </button>
               )}
             </div>
