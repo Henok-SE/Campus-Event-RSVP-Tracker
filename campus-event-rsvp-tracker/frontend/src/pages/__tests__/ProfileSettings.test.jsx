@@ -17,7 +17,9 @@ describe('ProfileSettings', () => {
       user: {
         name: 'Current User',
         student_id: '1234/18',
-        email: 'current@campusvibe.edu'
+        email: 'current@campusvibe.edu',
+        interest_categories: ['Academic'],
+        interest_keywords: ['mentorship']
       },
       updateProfile: mockUpdateProfile
     });
@@ -41,7 +43,9 @@ describe('ProfileSettings', () => {
     await waitFor(() => {
       expect(mockUpdateProfile).toHaveBeenCalledWith({
         name: 'Updated User',
-        email: 'updated@campusvibe.edu'
+        email: 'updated@campusvibe.edu',
+        interest_categories: ['Academic'],
+        interest_keywords: ['mentorship']
       });
     });
 

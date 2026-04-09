@@ -15,6 +15,18 @@ const AuthContext = createContext();
 const AUTH_USER_STORAGE_KEY = 'campusvibe_user';
 const AUTH_TOKEN_STORAGE_KEY = 'campusvibe_token';
 
+const withInterestDefaults = (candidate) => {
+  if (!candidate || typeof candidate !== 'object') {
+    return candidate;
+  }
+
+  return {
+    ...candidate,
+    interest_categories: Array.isArray(candidate.interest_categories) ? candidate.interest_categories : [],
+    interest_keywords: Array.isArray(candidate.interest_keywords) ? candidate.interest_keywords : []
+  };
+};
+
 const safeParseUser = () => {
   const saved = localStorage.getItem(AUTH_USER_STORAGE_KEY);
   if (!saved) {
@@ -22,7 +34,7 @@ const safeParseUser = () => {
   }
 
   try {
-    return JSON.parse(saved);
+    return withInterestDefaults(JSON.parse(saved));
   } catch {
     localStorage.removeItem(AUTH_USER_STORAGE_KEY);
     return null;
@@ -84,8 +96,9 @@ export function AuthProvider({ children }) {
           return;
         }
 
-        localStorage.setItem(AUTH_USER_STORAGE_KEY, JSON.stringify(currentUser));
-        setUser(currentUser);
+        const normalizedUser = withInterestDefaults(currentUser);
+        localStorage.setItem(AUTH_USER_STORAGE_KEY, JSON.stringify(normalizedUser));
+        setUser(normalizedUser);
       } catch {
         if (!isMounted) {
           return;
@@ -110,7 +123,7 @@ export function AuthProvider({ children }) {
     try {
       const response = await loginUser({ student_id, password });
       const authToken = response?.data?.data?.token;
-      const loggedInUser = response?.data?.data?.user;
+      const loggedInUser = withInterestDefaults(response?.data?.data?.user);
 
       if (!authToken || !loggedInUser) {
         throw new Error('Invalid auth response');
@@ -129,9 +142,23 @@ export function AuthProvider({ children }) {
     }
   };
 
-  const register = async ({ student_id, password }) => {
+  const register = async ({
+    student_id,
+    password,
+    name,
+    email,
+    interest_categories,
+    interest_keywords
+  }) => {
     try {
-      await registerUser({ student_id, password });
+      await registerUser({
+        student_id,
+        password,
+        name,
+        email,
+        interest_categories,
+        interest_keywords
+      });
     } catch (error) {
       throw getApiError(error, 'Registration failed');
     }
@@ -140,7 +167,7 @@ export function AuthProvider({ children }) {
   const updateProfile = async (payload) => {
     try {
       const response = await updateCurrentUser(payload);
-      const updatedUser = response?.data?.data;
+      const updatedUser = withInterestDefaults(response?.data?.data);
 
       if (!updatedUser) {
         throw new Error('Invalid profile response');

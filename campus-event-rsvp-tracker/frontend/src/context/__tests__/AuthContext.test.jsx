@@ -1,5 +1,5 @@
 import { act } from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthProvider, useAuth } from '../AuthContext';
 import * as api from '../../services/api';
@@ -24,8 +24,27 @@ vi.mock('../../services/api', () => ({
 }));
 
 function AuthProbe() {
-  const { isLoggedIn } = useAuth();
-  return <p data-testid="auth-state">{isLoggedIn ? 'logged-in' : 'logged-out'}</p>;
+  const { isLoggedIn, register } = useAuth();
+
+  return (
+    <div>
+      <p data-testid="auth-state">{isLoggedIn ? 'logged-in' : 'logged-out'}</p>
+      <button
+        type="button"
+        data-testid="register-trigger"
+        onClick={() => register({
+          name: 'New User',
+          email: 'new.user@campusvibe.edu',
+          student_id: '4321/20',
+          password: 'Password123!',
+          interest_categories: ['Tech'],
+          interest_keywords: ['robotics']
+        })}
+      >
+        register
+      </button>
+    </div>
+  );
 }
 
 describe('AuthContext', () => {
@@ -40,7 +59,9 @@ describe('AuthContext', () => {
           name: 'Test User',
           email: 'test@campusvibe.edu',
           student_id: '1234/18',
-          role: 'student'
+          role: 'student',
+          interest_categories: ['Academic'],
+          interest_keywords: ['debate']
         }
       }
     });
@@ -54,7 +75,9 @@ describe('AuthContext', () => {
         name: 'Test User',
         email: 'test@campusvibe.edu',
         student_id: '1234/18',
-        role: 'student'
+        role: 'student',
+        interest_categories: ['Academic'],
+        interest_keywords: ['debate']
       })
     );
 
@@ -79,5 +102,28 @@ describe('AuthContext', () => {
     expect(api.registerUnauthorizedHandler).toHaveBeenCalledTimes(1);
     expect(localStorage.getItem('campusvibe_token')).toBeNull();
     expect(localStorage.getItem('campusvibe_user')).toBeNull();
+  });
+
+  it('forwards extended registration payload to API', async () => {
+    api.registerUser.mockResolvedValue({ data: { success: true } });
+
+    render(
+      <AuthProvider>
+        <AuthProbe />
+      </AuthProvider>
+    );
+
+    fireEvent.click(screen.getByTestId('register-trigger'));
+
+    await waitFor(() => {
+      expect(api.registerUser).toHaveBeenCalledWith({
+        name: 'New User',
+        email: 'new.user@campusvibe.edu',
+        student_id: '4321/20',
+        password: 'Password123!',
+        interest_categories: ['Tech'],
+        interest_keywords: ['robotics']
+      });
+    });
   });
 });

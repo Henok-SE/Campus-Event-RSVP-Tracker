@@ -67,7 +67,9 @@ describe("Backend integration tests", () => {
       name: "Jane Doe",
       email: "jane@example.com",
       student_id: "3001/18",
-      password: "pass1234"
+      password: "pass1234",
+      interest_categories: ["Academic"],
+      interest_keywords: ["machine learning"]
     });
 
     expect(registerRes.status).toBe(201);
@@ -105,17 +107,29 @@ describe("Backend integration tests", () => {
       student_id: "3002/18",
       name: "Other Name",
       email: "other@campus.edu",
-      password: "pass1234"
+      password: "pass1234",
+      interest_categories: ["Tech"],
+      interest_keywords: ["robotics"]
     });
 
     expect(registerRes.status).toBe(201);
     expect(registerRes.body.success).toBe(true);
+
+    const savedUser = await User.findOne({ student_id: "3002/18" });
+    expect(savedUser).not.toBeNull();
+    expect(savedUser.name).toBe("Other Name");
+    expect(savedUser.email).toBe("other@campus.edu");
+    expect(savedUser.interest_categories).toEqual(["Tech"]);
+    expect(savedUser.interest_keywords).toEqual(["robotics"]);
   });
 
   test("register rejects invalid student_id format", async () => {
     const registerRes = await request(app).post("/api/auth/register").send({
+      name: "Bad Id",
+      email: "bad.id@example.com",
       student_id: "STU-010",
-      password: "pass1234"
+      password: "pass1234",
+      interest_categories: ["Academic"]
     });
 
     expect(registerRes.status).toBe(400);
@@ -490,6 +504,90 @@ describe("Backend integration tests", () => {
     expect(publicListRes.status).toBe(200);
     expect(publicListRes.body.data).toHaveLength(1);
     expect(publicListRes.body.data[0].status).toBe("Published");
+  });
+
+  test("publishing an event notifies users with matching interests", async () => {
+    const hashed = await bcrypt.hash("pass1234", 10);
+
+    const admin = await User.create({
+      name: "Publishing Admin",
+      email: "publishing.admin@example.com",
+      student_id: "3316/18",
+      password: hashed,
+      role: "Admin"
+    });
+
+    const creator = await User.create({
+      name: "Creator Student",
+      email: "creator.student@example.com",
+      student_id: "3317/18",
+      password: hashed,
+      role: "Student"
+    });
+
+    const categoryMatchUser = await User.create({
+      name: "Category Match",
+      email: "category.match@example.com",
+      student_id: "3318/18",
+      password: hashed,
+      role: "Student",
+      interest_categories: ["Tech"]
+    });
+
+    const keywordMatchUser = await User.create({
+      name: "Keyword Match",
+      email: "keyword.match@example.com",
+      student_id: "3319/18",
+      password: hashed,
+      role: "Student",
+      interest_keywords: ["robotics"]
+    });
+
+    const nonMatchUser = await User.create({
+      name: "Non Match",
+      email: "non.match@example.com",
+      student_id: "3320/18",
+      password: hashed,
+      role: "Student",
+      interest_categories: ["Arts"],
+      interest_keywords: ["photography"]
+    });
+
+    const adminToken = jwt.sign({ id: admin._id, role: admin.role }, process.env.JWT_SECRET);
+    const creatorToken = jwt.sign({ id: creator._id, role: creator.role }, process.env.JWT_SECRET);
+
+    const createRes = await request(app)
+      .post("/api/events")
+      .set("Authorization", `Bearer ${creatorToken}`)
+      .send({
+        title: "Campus Robotics Demo",
+        category: "Tech",
+        tags: ["Tech", "Robotics"]
+      });
+
+    expect(createRes.status).toBe(201);
+    const eventId = createRes.body.data._id;
+
+    const approveRes = await request(app)
+      .patch(`/api/events/${eventId}/review`)
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ decision: "approve" });
+
+    expect(approveRes.status).toBe(200);
+
+    const categoryUserNotifications = await Notification.find({ user_id: categoryMatchUser._id, event_id: eventId });
+    const keywordUserNotifications = await Notification.find({ user_id: keywordMatchUser._id, event_id: eventId });
+    const nonMatchNotifications = await Notification.find({ user_id: nonMatchUser._id, event_id: eventId });
+    const creatorInterestNotifications = await Notification.find({
+      user_id: creator._id,
+      event_id: eventId,
+      title: "New event for your interests"
+    });
+
+    expect(categoryUserNotifications.some((item) => item.title === "New event for your interests")).toBe(true);
+    expect(keywordUserNotifications.some((item) => item.title === "New event for your interests")).toBe(true);
+    expect(nonMatchNotifications.length).toBe(0);
+    expect(creatorInterestNotifications.length).toBe(0);
   });
 
   test("reject requires reason and creator can resubmit rejected events", async () => {

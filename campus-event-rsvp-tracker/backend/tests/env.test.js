@@ -36,7 +36,7 @@ describe("Environment configuration", () => {
     const config = getConfig();
 
     expect(config.jwtSecret).toBe("local-secret");
-    expect(config.port).toBe(5000);
+    expect(config.port).toBe(5050);
     expect(config.mongoUri).toBe("mongodb://127.0.0.1:27017/eventDB");
     expect(config.frontendOrigins).toEqual(["http://localhost:5173"]);
   });
