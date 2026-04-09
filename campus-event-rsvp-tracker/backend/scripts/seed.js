@@ -76,18 +76,23 @@ const seed = async () => {
   const usersByEmail = {};
 
   for (const entry of usersData) {
+    const update = {
+      $set: {
+        name: entry.name,
+        student_id: entry.student_id,
+        role: entry.role
+      }
+    };
+
+    if (entry.role === "Admin") {
+      update.$set.password = defaultPassword;
+    } else {
+      update.$setOnInsert = { password: defaultPassword };
+    }
+
     const user = await User.findOneAndUpdate(
       { email: entry.email },
-      {
-        $set: {
-          name: entry.name,
-          student_id: entry.student_id,
-          role: entry.role
-        },
-        $setOnInsert: {
-          password: defaultPassword
-        }
-      },
+      update,
       {
         returnDocument: "after",
         upsert: true

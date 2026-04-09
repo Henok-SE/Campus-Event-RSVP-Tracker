@@ -215,7 +215,18 @@ Authentication note:
 1. Login uses `student_id + password`.
 2. Registration is allowed only when `student_id` exists in the Student roster.
 3. Registration decision is based on `student_id` existence only.
-3. Register/login attempts are minimally tracked (`action`, `student_id`, `success`, `reason`, `created_at`).
+4. Register/login attempts are minimally tracked (`action`, `student_id`, `success`, `reason`, `created_at`).
+
+Admin authorization policy:
+1. Admins are manually authorized via seeded admin accounts in `backend/scripts/seed.js`.
+2. To authorize a new admin, update admin entries in seed data and rerun `npm --prefix backend run db:seed`.
+3. Role changes take effect after the user signs in again (new JWT role claim).
+
+Event moderation workflow:
+1. Students can create events, but submissions default to `Pending` review.
+2. Admins review `Pending` events and either approve (`Published`) or reject (`Rejected`) with required feedback.
+3. Rejected event owners can update and resubmit to move status back to `Pending`.
+4. Public event feeds expose only `Published` and `Ongoing` events.
 
 Seed profile summary:
 1. 7 total users
@@ -259,6 +270,12 @@ Event routes:
 1. `GET /events`
 2. `GET /events/:id`
 3. `POST /events` (requires Authorization header)
+4. `POST /events/upload-image` (requires Authorization header)
+5. `PATCH /events/:id` (requires Authorization header, owner)
+6. `PATCH /events/:id/resubmit` (requires Authorization header, rejected owner only)
+7. `PATCH /events/:id/review` (requires Authorization header, Admin only)
+8. `GET /events/review/pending` (requires Authorization header, Admin only)
+9. `DELETE /events/:id` (requires Authorization header, owner)
 
 System routes:
 1. `GET /api/health`

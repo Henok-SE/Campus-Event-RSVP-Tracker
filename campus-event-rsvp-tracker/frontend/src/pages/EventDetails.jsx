@@ -4,8 +4,10 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { MapPin, Users, Clock } from 'lucide-react';
 import Footer from '../components/common/Footer';
-import { cancelRsvp, deleteEvent, getApiError, getEventById, getMyRSVPs, rsvpEvent } from '../services/api';
+import { cancelRsvp, deleteEvent, getApiError, getEventById, getMyRSVPs, resubmitEventForReview, rsvpEvent } from '../services/api';
 import { mapApiEvent } from '../utils/eventAdapter';
+
+const RSVP_OPEN_STATUSES = new Set(['Published', 'Ongoing']);
 
 export default function EventDetails() {
   const { id } = useParams();
@@ -17,6 +19,7 @@ export default function EventDetails() {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [resubmitLoading, setResubmitLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [actionErrorMessage, setActionErrorMessage] = useState('');
 
@@ -158,6 +161,34 @@ export default function EventDetails() {
     }
   };
 
+  const handleResubmit = async () => {
+    if (!isLoggedIn) {
+      navigate(`/login?redirect=${encodeURIComponent(`/event/${id}`)}`);
+      return;
+    }
+
+    if (!event || resubmitLoading) {
+      return;
+    }
+
+    setActionErrorMessage('');
+    setResubmitLoading(true);
+
+    try {
+      const response = await resubmitEventForReview(event.id, {});
+      const updatedEvent = response?.data?.data;
+
+      if (updatedEvent) {
+        setEvent(mapApiEvent(updatedEvent));
+      }
+    } catch (error) {
+      const apiError = getApiError(error, 'Failed to resubmit event');
+      setActionErrorMessage(apiError.message);
+    } finally {
+      setResubmitLoading(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -178,9 +209,11 @@ export default function EventDetails() {
 
   const isClosed = event.status === 'Cancelled' || event.status === 'Completed';
   const isFull = event.capacity > 0 && event.attending >= event.capacity;
-  const canRSVP = rsvpStatus === 'none' && !isFull && !isClosed;
+  const isRsvpOpenStatus = RSVP_OPEN_STATUSES.has(event.status);
+  const canRSVP = rsvpStatus === 'none' && !isFull && !isClosed && isRsvpOpenStatus;
   const isConfirmed = rsvpStatus === 'confirmed';
   const isOwner = Boolean(user?.id && event?.createdBy && String(user.id) === String(event.createdBy));
+  const canResubmit = isOwner && event.status === 'Rejected';
 
   return (
     <div className="bg-gray-50 min-h-screen">
@@ -214,6 +247,11 @@ export default function EventDetails() {
                   {tag}
                 </span>
               ))}
+              {!isRsvpOpenStatus && (
+                <span className="inline-flex px-4 py-1.5 rounded-full text-sm font-medium bg-amber-100 text-amber-800">
+                  {event.status}
+                </span>
+              )}
               {isFull && (
                 <span className="inline-flex px-4 py-1.5 rounded-full text-sm font-medium bg-red-100 text-red-800">
                   Full
@@ -227,6 +265,12 @@ export default function EventDetails() {
             {actionErrorMessage ? (
               <div className="mb-6 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
                 {actionErrorMessage}
+              </div>
+            ) : null}
+
+            {event.rejectionReason ? (
+              <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                <span className="font-semibold">Review feedback:</span> {event.rejectionReason}
               </div>
             ) : null}
 
@@ -267,7 +311,7 @@ export default function EventDetails() {
                 >
                   {actionLoading ? 'Saving...' : 'Count Me In'}
                 </button>
-              ) : isClosed ? (
+              ) : isClosed || !isRsvpOpenStatus ? (
                 <div className="bg-slate-200 text-slate-700 px-10 py-5 rounded-2xl font-semibold">
                   RSVP unavailable for this event status
                 </div>
@@ -290,6 +334,16 @@ export default function EventDetails() {
                   className="px-10 py-5 rounded-2xl font-medium text-red-700 border border-red-300 hover:bg-red-50 disabled:opacity-60 transition-colors"
                 >
                   {deleteLoading ? 'Deleting...' : 'Delete Event'}
+                </button>
+              )}
+
+              {canResubmit && (
+                <button
+                  onClick={handleResubmit}
+                  disabled={resubmitLoading}
+                  className="px-10 py-5 rounded-2xl font-medium text-amber-700 border border-amber-300 hover:bg-amber-50 disabled:opacity-60 transition-colors"
+                >
+                  {resubmitLoading ? 'Resubmitting...' : 'Resubmit For Review'}
                 </button>
               )}
             </div>

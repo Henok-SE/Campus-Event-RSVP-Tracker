@@ -62,6 +62,9 @@ export const updateCurrentUser = (payload) => api.patch('/auth/me', payload);
 export const getEvents = () => api.get('/events');
 export const getEventById = (eventId) => api.get(`/events/${eventId}`);
 export const createEvent = (payload) => api.post('/events', payload);
+export const getPendingReviewEvents = () => api.get('/events/review/pending');
+export const reviewEventSubmission = (eventId, payload) => api.patch(`/events/${eventId}/review`, payload);
+export const resubmitEventForReview = (eventId, payload) => api.patch(`/events/${eventId}/resubmit`, payload);
 export const uploadEventImage = (file) => {
   const formData = new FormData();
   formData.append('image', file);

@@ -3,11 +3,14 @@ import { useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Footer from '../components/common/Footer';
 import { X, Image as ImageIcon } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 import { createEvent, getApiError, uploadEventImage } from '../services/api';
 
 export default function CreateEvent() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const fileInputRef = useRef(null);
+  const isAdmin = user?.role === 'Admin';
 
   const [formData, setFormData] = useState({
     title: '',
@@ -96,7 +99,7 @@ export default function CreateEvent() {
         time: formData.time || undefined,
         capacity: formData.capacity ? Number(formData.capacity) : undefined,
         category: formData.category,
-        status: 'Published',
+        status: isAdmin ? 'Published' : 'Pending',
         tags: [formData.category],
         image_url: imageUrl
       };
@@ -104,7 +107,11 @@ export default function CreateEvent() {
       const createResponse = await createEvent(payload);
       const createdEvent = createResponse?.data?.data;
 
-      setSuccessMessage('Event created successfully! Redirecting to details...');
+      setSuccessMessage(
+        isAdmin
+          ? 'Event created and published successfully! Redirecting to details...'
+          : 'Event submitted for admin review. Redirecting to details...'
+      );
 
       const createdId = createdEvent?._id || createdEvent?.id;
       if (createdId) {
@@ -311,14 +318,16 @@ export default function CreateEvent() {
               {loading ? (
                 <>
                   <span className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full"></span>
-                  Creating Event...
+                  {isAdmin ? 'Creating Event...' : 'Submitting For Review...'}
                 </>
               ) : (
-                "Create & Publish Event"
+                isAdmin ? 'Create & Publish Event' : 'Submit Event For Review'
               )}
             </button>
             <p className="text-center text-xs text-slate-500 mt-4">
-              Your event will be reviewed before going live
+              {isAdmin
+                ? 'Admin-created events are published immediately.'
+                : 'Your event will be reviewed by an admin before going live.'}
             </p>
           </div>
         </form>

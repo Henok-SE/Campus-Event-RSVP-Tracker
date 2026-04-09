@@ -34,7 +34,7 @@ const validateObjectIdParam = (paramName) => (req, res, next) => {
 
 const validateEventBody = ({ partial = false } = {}) => (req, res, next) => {
   const { title, event_date, capacity, status, tags } = req.body || {};
-  const allowedStatuses = ["Draft", "Published", "Ongoing", "Completed", "Cancelled"];
+  const allowedStatuses = ["Draft", "Pending", "Rejected", "Published", "Ongoing", "Completed", "Cancelled"];
 
   if (!partial && (title === undefined || String(title).trim() === "")) {
     return sendError(res, {
@@ -96,6 +96,30 @@ const validateEventBody = ({ partial = false } = {}) => (req, res, next) => {
   return next();
 };
 
+const validateModerationDecision = (req, res, next) => {
+  const { decision, reason } = req.body || {};
+  const normalizedDecision = String(decision || "").trim().toLowerCase();
+
+  if (!normalizedDecision || !["approve", "reject"].includes(normalizedDecision)) {
+    return sendError(res, {
+      status: 400,
+      code: "VALIDATION_ERROR",
+      message: "decision must be either approve or reject"
+    });
+  }
+
+  if (normalizedDecision === "reject" && !String(reason || "").trim()) {
+    return sendError(res, {
+      status: 400,
+      code: "VALIDATION_ERROR",
+      message: "reason is required when rejecting an event"
+    });
+  }
+
+  req.body.decision = normalizedDecision;
+  return next();
+};
+
 const validateRsvpBody = (req, res, next) => {
   const { event_id } = req.body || {};
 
@@ -114,5 +138,6 @@ module.exports = {
   validateRequired,
   validateObjectIdParam,
   validateEventBody,
-  validateRsvpBody
+  validateRsvpBody,
+  validateModerationDecision
 };
