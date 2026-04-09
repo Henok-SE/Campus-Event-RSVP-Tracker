@@ -104,7 +104,9 @@ describe("Backend API smoke tests", () => {
       name: "Jane",
       email: "jane@example.com",
       student_id: "1234/18",
-      password: "pass1234"
+      password: "pass1234",
+      interest_categories: ["Academic"],
+      interest_keywords: ["robotics"]
     });
 
     expect(res.status).toBe(201);
@@ -119,7 +121,7 @@ describe("Backend API smoke tests", () => {
     });
   });
 
-  test("POST /api/auth/register ignores submitted name/email mismatches", async () => {
+  test("POST /api/auth/register stores submitted name/email and interests", async () => {
     Student.findOne.mockResolvedValue({
       student_id: "1234/18",
       name: "Official Name",
@@ -133,11 +135,19 @@ describe("Backend API smoke tests", () => {
       name: "Different Name",
       email: "different@campus.edu",
       student_id: "1234/18",
-      password: "pass1234"
+      password: "pass1234",
+      interest_categories: ["Tech"],
+      interest_keywords: ["ai"]
     });
 
     expect(res.status).toBe(201);
     expect(res.body.success).toBe(true);
+    expect(User).toHaveBeenCalledWith(expect.objectContaining({
+      name: "Different Name",
+      email: "different@campus.edu",
+      interest_categories: ["Tech"],
+      interest_keywords: ["ai"]
+    }));
     expect(AuthAudit.create).toHaveBeenCalledWith({
       action: "REGISTER",
       student_id: "1234/18",
@@ -148,8 +158,11 @@ describe("Backend API smoke tests", () => {
 
   test("POST /api/auth/register rejects invalid student id format", async () => {
     const res = await request(app).post("/api/auth/register").send({
+      name: "Jane",
+      email: "jane@example.com",
       student_id: "STU-001",
-      password: "pass1234"
+      password: "pass1234",
+      interest_categories: ["Academic"]
     });
 
     expect(res.status).toBe(400);
@@ -166,8 +179,11 @@ describe("Backend API smoke tests", () => {
     Student.findOne.mockResolvedValue(null);
 
     const res = await request(app).post("/api/auth/register").send({
+      name: "Ghost User",
+      email: "ghost@example.com",
       student_id: "9999/99",
-      password: "pass1234"
+      password: "pass1234",
+      interest_categories: ["Academic"]
     });
 
     expect(res.status).toBe(403);
@@ -337,7 +353,8 @@ describe("Backend API smoke tests", () => {
     Event.findById.mockResolvedValue({
       _id: eventId,
       title: "Hackathon",
-      toObject: () => ({ _id: eventId, title: "Hackathon" })
+      status: "Published",
+      toObject: () => ({ _id: eventId, title: "Hackathon", status: "Published" })
     });
 
     const res = await request(app).get(`/api/events/${eventId}`);
@@ -357,7 +374,7 @@ describe("Backend API smoke tests", () => {
       .send({ title: "Hackathon", location: "Engineering Hall" });
 
     expect(res.status).toBe(201);
-    expect(res.body.message).toBe("Event created");
+    expect(res.body.message).toBe("Event submitted for review");
     expect(mockSave).toHaveBeenCalled();
   });
 

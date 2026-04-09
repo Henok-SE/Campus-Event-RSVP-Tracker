@@ -32,44 +32,58 @@ const seed = async () => {
       name: "Genene",
       email: "genene@campus.edu",
       student_id: "1001/18",
-      role: "Admin"
+      role: "Admin",
+      interest_categories: ["Tech", "Academic"],
+      interest_keywords: ["startup", "innovation"]
     },
     {
       name: "Henok",
       email: "henok@campus.edu",
       student_id: "1002/18",
-      role: "Admin"
+      role: "Admin",
+      interest_categories: ["Tech", "Social"],
+      interest_keywords: ["pitching", "networking"]
     },
     {
       name: "Maya",
       email: "maya@campus.edu",
       student_id: "1003/18",
-      role: "Admin"
+      role: "Admin",
+      interest_categories: ["Academic", "Arts"],
+      interest_keywords: ["ai ethics", "research"]
     },
     {
         name: "Bedriya",
         email: "bedriya@campus.edu",
         student_id: "1004/18",
-        role: "Admin"
+        role: "Admin",
+        interest_categories: ["Wellness", "Social"],
+        interest_keywords: ["mindfulness", "community"]
     },
     {
         name: "Hana",
         email: "hana@campus.edu",
         student_id: "1005/18",
-        role: "Admin"
+        role: "Admin",
+        interest_categories: ["Free Food", "Social"],
+        interest_keywords: ["food", "student life"]
 
     },
     {
         name: "John Student",
         email: "john.student@campus.edu",
         student_id: "2001/18",
-        role: "Student"
+        role: "Student",
+        interest_categories: ["Tech", "Sports"],
+        interest_keywords: ["robotics", "hackathon"]
     },
     {
         name: "Sara Student",
         email: "sara.student@campus.edu",
         student_id: "2002/18",
-        role: "Student"
+        role: "Student",
+        interest_categories: ["Arts", "Academic"],
+        interest_keywords: ["music", "design"]
     }
   ];
 
@@ -80,7 +94,9 @@ const seed = async () => {
       $set: {
         name: entry.name,
         student_id: entry.student_id,
-        role: entry.role
+        role: entry.role,
+        interest_categories: entry.interest_categories || [],
+        interest_keywords: entry.interest_keywords || []
       }
     };
 

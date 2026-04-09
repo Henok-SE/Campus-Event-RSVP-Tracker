@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const { FIXED_INTEREST_CATEGORIES } = require("../config/interestOptions");
 
 const userSchema = new mongoose.Schema({
 
@@ -28,6 +29,18 @@ role:{
 type:String,
 default:"Student"
 },
+
+interest_categories:[{
+type:String,
+enum:FIXED_INTEREST_CATEGORIES,
+trim:true
+}],
+
+interest_keywords:[{
+type:String,
+trim:true,
+lowercase:true
+}],
 
 created_at:{
 type:Date,

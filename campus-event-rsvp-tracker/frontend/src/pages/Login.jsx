@@ -3,9 +3,21 @@ import { useAuth } from '../context/AuthContext';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useEffect, useMemo, useState } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
+import { FIXED_INTEREST_CATEGORIES } from '../data/interestOptions';
 
 const STUDENT_ID_PATTERN = /^\d{4}\/\d{2}$/;
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const normalizeStudentId = (value = '') => value.trim().replace(/\s+/g, '');
+const normalizeName = (value = '') => value.trim().replace(/\s+/g, ' ');
+const normalizeEmail = (value = '') => value.trim().toLowerCase();
+const parseCustomInterests = (value = '') => (
+  [...new Set(
+    value
+      .split(',')
+      .map((item) => item.trim().toLowerCase())
+      .filter(Boolean)
+  )]
+);
 
 export default function Login() {
   const { isAuthLoading, isLoggedIn, login, register } = useAuth();
@@ -24,8 +36,12 @@ export default function Login() {
   }, [location.search]);
 
   const [formData, setFormData] = useState({
+    name: '',
+    email: '',
     student_id: '',
-    password: ''
+    password: '',
+    interest_categories: [],
+    interest_keywords: ''
   });
 
   useEffect(() => {
@@ -36,7 +52,25 @@ export default function Login() {
 
   const handleChange = (e) => {
     setErrorMessage('');
+    setSuccessMessage('');
     setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleInterestCategoryToggle = (category) => {
+    setErrorMessage('');
+    setSuccessMessage('');
+
+    setFormData((prev) => {
+      const alreadySelected = prev.interest_categories.includes(category);
+      const nextCategories = alreadySelected
+        ? prev.interest_categories.filter((entry) => entry !== category)
+        : [...prev.interest_categories, category];
+
+      return {
+        ...prev,
+        interest_categories: nextCategories
+      };
+    });
   };
 
   const handleSubmit = async (e) => {
@@ -56,13 +90,45 @@ export default function Login() {
 
     try {
       if (mode === 'register') {
+        const normalizedName = normalizeName(formData.name);
+        const normalizedEmail = normalizeEmail(formData.email);
+        const interestKeywords = parseCustomInterests(formData.interest_keywords);
+
+        if (!normalizedName) {
+          setErrorMessage('Full name is required');
+          setLoading(false);
+          return;
+        }
+
+        if (!EMAIL_PATTERN.test(normalizedEmail)) {
+          setErrorMessage('Email format is invalid');
+          setLoading(false);
+          return;
+        }
+
+        if (formData.interest_categories.length + interestKeywords.length === 0) {
+          setErrorMessage('Select at least one interest category or add a custom interest');
+          setLoading(false);
+          return;
+        }
+
         await register({
+          name: normalizedName,
+          email: normalizedEmail,
           student_id: normalizedStudentId,
-          password: formData.password
+          password: formData.password,
+          interest_categories: formData.interest_categories,
+          interest_keywords: interestKeywords
         });
 
         setSuccessMessage('Account created successfully. Please sign in.');
         setMode('login');
+        setFormData((prev) => ({
+          ...prev,
+          password: '',
+          interest_categories: [],
+          interest_keywords: ''
+        }));
       } else {
         await login({
           student_id: normalizedStudentId,
@@ -121,7 +187,7 @@ export default function Login() {
 
                   {mode === 'register' ? (
                     <p className="mb-5 rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-700">
-                      Registration uses your official student roster record. Name and email are synced from roster data.
+                      Registration uses your official student ID roster gate, but your profile name, email, and interests are saved from your signup input.
                     </p>
                   ) : null}
 
@@ -138,6 +204,36 @@ export default function Login() {
                   ) : null}
 
                   <form onSubmit={handleSubmit} className="space-y-6" autoComplete="off">
+                    {mode === 'register' ? (
+                      <>
+                        <div>
+                          <label className="block text-sm font-medium mb-2">Full Name</label>
+                          <input
+                            type="text"
+                            name="name"
+                            value={formData.name}
+                            onChange={handleChange}
+                            className="w-full px-5 py-4 border border-slate-300 rounded-2xl focus:outline-none focus:border-blue-600"
+                            placeholder="Your full name"
+                            required
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium mb-2">Email Address</label>
+                          <input
+                            type="email"
+                            name="email"
+                            value={formData.email}
+                            onChange={handleChange}
+                            className="w-full px-5 py-4 border border-slate-300 rounded-2xl focus:outline-none focus:border-blue-600"
+                            placeholder="you@example.com"
+                            required
+                          />
+                        </div>
+                      </>
+                    ) : null}
+
                     <div>
                     <label className="block text-sm font-medium mb-2">Student ID</label>
                     <input
@@ -185,6 +281,51 @@ export default function Login() {
                       </button>
                     </div>
                     </div>
+
+                    {mode === 'register' ? (
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-sm font-medium mb-2">Interest Categories</label>
+                          <div className="grid grid-cols-2 gap-2 rounded-2xl border border-slate-200 p-4">
+                            {FIXED_INTEREST_CATEGORIES.map((category) => {
+                              const selected = formData.interest_categories.includes(category);
+
+                              return (
+                                <label
+                                  key={category}
+                                  className={`flex items-center gap-2 rounded-xl px-3 py-2 text-sm transition ${
+                                    selected
+                                      ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                                      : 'bg-slate-50 text-slate-700 border border-transparent'
+                                  }`}
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={selected}
+                                    onChange={() => handleInterestCategoryToggle(category)}
+                                    className="h-4 w-4 accent-blue-600"
+                                  />
+                                  <span>{category}</span>
+                                </label>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium mb-2">Custom Interests (optional)</label>
+                          <input
+                            type="text"
+                            name="interest_keywords"
+                            value={formData.interest_keywords}
+                            onChange={handleChange}
+                            className="w-full px-5 py-4 border border-slate-300 rounded-2xl focus:outline-none focus:border-blue-600"
+                            placeholder="robotics, entrepreneurship, volunteering"
+                          />
+                          <p className="mt-2 text-xs text-slate-500">Separate multiple interests with commas.</p>
+                        </div>
+                      </div>
+                    ) : null}
 
                     <button
                     type="submit"

@@ -214,8 +214,24 @@ Seeded test accounts:
 Authentication note:
 1. Login uses `student_id + password`.
 2. Registration is allowed only when `student_id` exists in the Student roster.
-3. Registration decision is based on `student_id` existence only.
-4. Register/login attempts are minimally tracked (`action`, `student_id`, `success`, `reason`, `created_at`).
+3. Registration decision is based on `student_id` existence only, but saved profile data comes from the submitted `name` and `email`.
+4. Signup requires at least one interest (`interest_categories` and/or `interest_keywords`) for personalized event notifications.
+5. Register/login attempts are minimally tracked (`action`, `student_id`, `success`, `reason`, `created_at`).
+
+Supported fixed interest categories:
+1. `Academic`
+2. `Sports`
+3. `Arts`
+4. `Social`
+5. `Tech`
+6. `Free Food`
+7. `Wellness`
+
+Interest notification behavior:
+1. When an event is published, users whose interests match event category/tags receive an in-app notification.
+2. Matching uses fixed category overlap and custom keyword overlap.
+3. Event creators are excluded from interest-match broadcast notifications.
+4. Email delivery is not enabled yet in this phase (in-app notifications only).
 
 Admin authorization policy:
 1. Admins are manually authorized via seeded admin accounts in `backend/scripts/seed.js`.
@@ -263,7 +279,7 @@ Auth routes:
 3. `GET /auth/protected`
 
 Auth payloads:
-1. Register request body: `student_id`, `password` (optional `name` and `email` are ignored for allow/deny decision)
+1. Register request body: `name`, `email`, `student_id`, `password`, `interest_categories` (array), optional `interest_keywords` (array)
 2. Login request body: `student_id`, `password`
 
 Event routes:

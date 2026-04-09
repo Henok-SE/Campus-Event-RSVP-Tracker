@@ -1,8 +1,10 @@
 const Event = require("../models/event");
 const RSVP = require("../models/rsvp");
 const Notification = require("../models/notification");
+const User = require("../models/users");
 const mongoose = require("mongoose");
 const { sendSuccess, sendError } = require("../utils/apiResponse");
+const { FIXED_INTEREST_CATEGORY_LOOKUP } = require("../config/interestOptions");
 
 const PUBLIC_EVENT_STATUSES = ["Published", "Ongoing"];
 const REVIEWABLE_EVENT_STATUS = "Pending";
@@ -20,6 +22,72 @@ const createNotificationSafely = async ({ user_id, type, title, message, event_i
     });
   } catch (error) {
     // Notifications are best-effort and should not block core event workflows.
+  }
+};
+
+const normalizeToken = (value = "") => String(value).trim().replace(/\s+/g, " ").toLowerCase();
+
+const collectEventInterestTokens = (event = {}) => {
+  const rawTokens = [event.category, ...(Array.isArray(event.tags) ? event.tags : [])]
+    .map((entry) => normalizeToken(entry))
+    .filter(Boolean);
+
+  const uniqueTokens = [...new Set(rawTokens)];
+  const matchedCategories = [];
+
+  for (const token of uniqueTokens) {
+    const canonical = FIXED_INTEREST_CATEGORY_LOOKUP.get(token);
+    if (canonical) {
+      matchedCategories.push(canonical);
+    }
+  }
+
+  return {
+    eventTerms: uniqueTokens,
+    matchedCategories: [...new Set(matchedCategories)]
+  };
+};
+
+const notifyInterestedUsersOnPublish = async ({ event, excludeUserId }) => {
+  try {
+    const { eventTerms, matchedCategories } = collectEventInterestTokens(event);
+
+    const interestClauses = [];
+    if (matchedCategories.length > 0) {
+      interestClauses.push({ interest_categories: { $in: matchedCategories } });
+    }
+    if (eventTerms.length > 0) {
+      interestClauses.push({ interest_keywords: { $in: eventTerms } });
+    }
+
+    if (interestClauses.length === 0) {
+      return;
+    }
+
+    const recipientFilter = {
+      $or: interestClauses
+    };
+
+    if (excludeUserId) {
+      recipientFilter._id = { $ne: excludeUserId };
+    }
+
+    const recipients = await User.find(recipientFilter).select("_id name");
+    if (!Array.isArray(recipients) || recipients.length === 0) {
+      return;
+    }
+
+    await Promise.all(
+      recipients.map((recipient) => createNotificationSafely({
+        user_id: recipient._id,
+        type: "info",
+        title: "New event for your interests",
+        message: `Hi ${recipient.name || "there"}, ${event.title || "a new event"} matches your interests and is now live.`,
+        event_id: event._id
+      }))
+    );
+  } catch (error) {
+    // Interest notifications are best-effort and should not block publication.
   }
 };
 
@@ -277,6 +345,11 @@ exports.createEvent = async (req, res) => {
         message: `${event.title || "Your event"} is pending admin review`,
         event_id: event._id
       });
+    } else if (event.status === "Published") {
+      await notifyInterestedUsersOnPublish({
+        event,
+        excludeUserId: req.user.id
+      });
     }
 
     return sendSuccess(res, {
@@ -379,6 +452,7 @@ exports.getEventById = async (req, res) => {
 exports.updateEvent = async (req, res) => {
   try {
     const { id } = req.params;
+    let previousStatus = null;
 
     if (!req.user || !req.user.id) {
       return sendError(res, {
@@ -389,6 +463,7 @@ exports.updateEvent = async (req, res) => {
     }
 
     const event = await Event.findById(id);
+    previousStatus = event ? event.status : null;
 
     if (!event) {
       return sendError(res, {
@@ -439,6 +514,13 @@ exports.updateEvent = async (req, res) => {
     }
 
     await event.save();
+
+    if (event.status === "Published" && previousStatus !== "Published") {
+      await notifyInterestedUsersOnPublish({
+        event,
+        excludeUserId: req.user.id
+      });
+    }
 
     return sendSuccess(res, {
       status: 200,
@@ -551,6 +633,13 @@ exports.reviewEventSubmission = async (req, res) => {
     }
 
     await event.save();
+
+    if (decision === "approve" && event.status === "Published") {
+      await notifyInterestedUsersOnPublish({
+        event,
+        excludeUserId: event.created_by
+      });
+    }
 
     const attending = Number.isInteger(event.attending_count)
       ? event.attending_count
