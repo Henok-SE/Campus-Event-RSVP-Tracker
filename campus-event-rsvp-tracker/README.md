@@ -297,21 +297,158 @@ System routes:
 1. `GET /api/health`
 2. `GET /`
 
-## Testing and Quality Gates
-Backend API smoke tests are in:
-`backend/tests/api.test.js`
+## Complete Team Setup and Testing Guide
+Use this section as the single onboarding + QA runbook for all teammates.
 
-Run tests:
+### Step 1: Install required software
+Required tools:
+1. Git
+2. Node.js 18 or newer
+3. npm 9 or newer
+4. MongoDB Community Server
+
+Quick verification commands:
+
+```bash
+git --version
+node -v
+npm -v
+mongod --version
+```
+
+### Step 2: Clone and install dependencies
+From your machine:
+
+```bash
+git clone <your-repo-url>
+cd campus-event-rsvp-tracker
+npm run install:all
+```
+
+What this installs:
+1. Frontend dependencies from `frontend/package.json`
+2. Backend dependencies from `backend/package.json`
+
+### Step 3: Configure backend environment
+Initialize backend env file:
+
+```bash
+cp backend/.env.example backend/.env
+```
+
+Required `.env` values:
+
+```env
+PORT=5050
+MONGODB_URI=mongodb://127.0.0.1:27017/eventDB
+JWT_SECRET=dev-jwt-secret-change-me
+FRONTEND_ORIGINS=http://localhost:5173
+```
+
+Validate configuration:
+
+```bash
+npm --prefix backend run check:env
+```
+
+### Step 4: Start MongoDB and seed baseline data
+Ensure MongoDB server is running, then seed:
+
+```bash
+npm --prefix backend run db:seed
+```
+
+Optional roster import command if needed:
+
+```bash
+npm --prefix backend run db:import:students:finalized:replace
+```
+
+### Step 5: Run automated tests
+Run all backend tests:
 
 ```bash
 npm --prefix backend run test
 ```
 
+Run backend integration-only suite:
+
+```bash
+npm --prefix backend run test:integration
+```
+
+Run frontend unit tests:
+
+```bash
+npm --prefix frontend run test:run
+```
+
+Run frontend production build check:
+
+```bash
+npm --prefix frontend run build
+```
+
+### Step 6: Run app locally for manual QA
+Start backend and frontend in separate terminals:
+
+```bash
+# Terminal 1
+npm run dev:backend
+
+# Terminal 2
+npm run dev:frontend
+```
+
+URLs:
+1. Frontend: `http://localhost:5173`
+2. Backend health: `http://localhost:5050/api/health`
+
+### Step 7: Manual end-to-end test checklist
+Use these checks before opening a PR.
+
+Auth and profile checks:
+1. Register a new student account with `name`, `email`, `student_id`, `password`, and at least one interest.
+2. Confirm login works with `student_id + password`.
+3. Open profile settings and update name, email, and interests.
+
+Moderation checks:
+1. Student creates event and sees `Pending` status.
+2. Admin logs in and opens review queue.
+3. Admin rejects once with a reason.
+4. Student resubmits.
+5. Admin approves.
+6. Confirm event appears in public feeds (`Published`/`Ongoing` only).
+
+Interest notification checks:
+1. Publish an event tagged with a category or keyword matching another user interests.
+2. Confirm matching users receive in-app "New event for your interests" notification.
+3. Confirm non-matching users do not receive that notification.
+4. Confirm event creator is excluded from interest broadcast notification.
+
+RSVP and notification checks:
+1. RSVP to a published event.
+2. Confirm RSVP confirmation notification appears.
+3. Cancel RSVP and confirm cancellation notification appears.
+
+### Step 8: Suggested QA ownership split for 5 teammates
+1. Frontend Lead: signup/profile forms, route guards, and UI behavior.
+2. Backend Lead: auth/event/notification endpoint behavior.
+3. Database Lead: seed/import correctness and schema/index checks.
+4. QA Lead: executes this full checklist and records defects.
+5. DevOps and Docs Lead: verifies env consistency and updates README.
+
+## Testing and Quality Gates
+Backend API smoke tests location:
+1. `backend/tests/api.test.js`
+
 Team gate before merge:
-1. Backend tests pass
-2. No unresolved editor/lint errors in changed files
-3. README and env docs updated if behavior changed
-4. PR reviewed and approved
+1. Backend tests pass.
+2. Frontend tests pass.
+3. Frontend build passes.
+4. No unresolved editor/lint errors in changed files.
+5. README and env docs updated if behavior changed.
+6. PR reviewed and approved.
 
 ## Team Implementation Rules
 These rules should be followed for all upcoming implementations.
