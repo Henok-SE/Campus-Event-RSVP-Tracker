@@ -112,7 +112,12 @@ Required variables:
 PORT=5050
 MONGODB_URI=mongodb://127.0.0.1:27017/eventDB
 JWT_SECRET=dev-jwt-secret-change-me
+FRONTEND_ORIGINS=http://localhost:5173
 ```
+
+Notes:
+1. `FRONTEND_ORIGINS` is a comma-separated allowlist used by backend CORS checks.
+2. For multiple local clients, use values like `http://localhost:5173,http://127.0.0.1:5173`.
 
 Reference template:
 `backend/.env.example`

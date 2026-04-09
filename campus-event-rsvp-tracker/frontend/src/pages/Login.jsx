@@ -24,9 +24,7 @@ export default function Login() {
   }, [location.search]);
 
   const [formData, setFormData] = useState({
-    name: '',
     student_id: '',
-    email: '',
     password: ''
   });
 
@@ -59,8 +57,6 @@ export default function Login() {
     try {
       if (mode === 'register') {
         await register({
-          name: formData.name.trim(),
-          email: formData.email.trim(),
           student_id: normalizedStudentId,
           password: formData.password
         });
@@ -123,6 +119,12 @@ export default function Login() {
                     {mode === 'register' ? 'Create Account' : 'Welcome Back'}
                   </h2>
 
+                  {mode === 'register' ? (
+                    <p className="mb-5 rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-700">
+                      Registration uses your official student roster record. Name and email are synced from roster data.
+                    </p>
+                  ) : null}
+
                   {errorMessage ? (
                     <div className="mb-5 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
                     {errorMessage}
@@ -136,36 +138,6 @@ export default function Login() {
                   ) : null}
 
                   <form onSubmit={handleSubmit} className="space-y-6" autoComplete="off">
-                    {mode === 'register' ? (
-                    <>
-                      <div>
-                      <label className="block text-sm font-medium mb-2">Full Name</label>
-                      <input
-                        type="text"
-                        name="name"
-                        value={formData.name}
-                        onChange={handleChange}
-                        className="w-full px-5 py-4 border border-slate-300 rounded-2xl focus:outline-none focus:border-blue-600"
-                        placeholder="John Student"
-                        required
-                      />
-                      </div>
-
-                      <div>
-                      <label className="block text-sm font-medium mb-2">Email</label>
-                      <input
-                        type="email"
-                        name="email"
-                        value={formData.email}
-                        onChange={handleChange}
-                        className="w-full px-5 py-4 border border-slate-300 rounded-2xl focus:outline-none focus:border-blue-600"
-                        placeholder="john.student@campus.edu"
-                        required
-                      />
-                      </div>
-                    </>
-                    ) : null}
-
                     <div>
                     <label className="block text-sm font-medium mb-2">Student ID</label>
                     <input
