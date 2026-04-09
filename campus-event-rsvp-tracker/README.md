@@ -203,11 +203,11 @@ Import output summary includes:
 5. Invalid rows
 
 Seeded test accounts:
-1. `1001/18` / `Password123!` (Admin)
-2. `1002/18` / `Password123!` (Admin)
-3. `1003/18` / `Password123!` (Admin)
-4. `1004/18` / `Password123!` (Admin)
-5. `1005/18` / `Password123!` (Admin)
+1. `1001/18` / `Password123!` (Admin - Genene)
+2. `1002/18` / `Password123!` (Admin - Henok)
+3. `1003/18` / `Password123!` (Admin - Maya)
+4. `1004/18` / `Password123!` (Admin - Bedriya)
+5. `1005/18` / `Password123!` (Admin - Hana)
 6. `2001/18` / `Password123!` (Student)
 7. `2002/18` / `Password123!` (Student)
 
