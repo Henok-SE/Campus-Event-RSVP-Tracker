@@ -183,17 +183,29 @@ export default function Landing() {
       </section>
 
       {/* FINAL CTA */}
-      <div className="bg-blue-600 py-20 text-white text-center rounded-3xl mx-6">
-        <div className="max-w-2xl mx-auto px-6">
-          <h2 className="text-5xl font-bold mb-6">Ready to vibe with your campus?</h2>
-          <p className="text-2xl opacity-90 mb-10">Join thousands of students already discovering unforgettable moments.</p>
-          
-          <Link 
-            to="/login" 
-            className="inline-block bg-white text-blue-600 px-16 py-5 rounded-xl font-semibold text-xl hover:bg-slate-100 transition-all shadow-lg"
-          >
-            Get Started Free →
-          </Link>
+      <div className="mx-6 mb-10">
+        <div className="relative overflow-hidden rounded-4xl border border-slate-200 bg-white px-6 py-12 sm:px-10 sm:py-14 text-center shadow-[0_20px_60px_-35px_rgba(15,23,42,0.4)]">
+          <div className="absolute -top-16 -right-10 h-44 w-44 rounded-full bg-blue-100/70 blur-2xl" />
+          <div className="absolute -bottom-20 -left-10 h-52 w-52 rounded-full bg-slate-100 blur-2xl" />
+
+          <div className="relative max-w-2xl mx-auto">
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-blue-700 mb-4">CampusVibe</p>
+            <h2 className="text-3xl sm:text-5xl font-semibold tracking-tight text-slate-900 mb-4">Ready to vibe with your campus?</h2>
+            <p className="text-base sm:text-lg text-slate-600 mb-8">Join students already discovering events, communities, and moments that matter.</p>
+
+            <div className="flex flex-wrap justify-center gap-2 mb-8">
+              <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-600">Student-led</span>
+              <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-600">Fast RSVP</span>
+              <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-600">Clean event feed</span>
+            </div>
+
+            <Link
+              to="/login"
+              className="inline-flex items-center justify-center rounded-full bg-blue-600 px-10 py-3.5 text-sm sm:text-base font-semibold text-white hover:bg-blue-700 transition-colors"
+            >
+              Get Started Free
+            </Link>
+          </div>
         </div>
       </div>
     </>
