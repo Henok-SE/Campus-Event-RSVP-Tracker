@@ -1,7 +1,7 @@
 // src/pages/Dashboard.jsx
 import { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Clock3, MapPin, Plus, Users } from 'lucide-react';
+import { Calendar, Clock3, MapPin, Users } from 'lucide-react';
 import DashboardNavbar from '../components/common/DashboardNavbar';
 import Footer from '../components/common/Footer';
 import { useDebounce } from '../hooks/useDebounce';
@@ -348,8 +348,8 @@ export default function Dashboard() {
         </div>
 
         {/* Events Grid + My Schedule */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 pb-20 grid lg:grid-cols-4 gap-8">
-          <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-2 gap-7">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 pb-20 grid lg:grid-cols-3 gap-8 items-start">
+          <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-7">
             {errorMessage ? (
               <div className="col-span-full rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-700">
                 {errorMessage}
@@ -433,42 +433,40 @@ export default function Dashboard() {
           </div>
 
           {/* My Schedule Sidebar */}
-          <div className="bg-white border border-slate-200 rounded-3xl p-6 h-fit lg:sticky lg:top-24 shadow-sm">
-            <div className="flex items-center justify-between gap-4 mb-5">
-              <div className="flex items-center gap-4">
-                <span className="text-3xl">📅</span>
-                <h3 className="text-xl font-semibold">My Schedule ({mySchedule.length})</h3>
+          <div className="self-start h-fit border border-slate-200 bg-slate-50/70 rounded-3xl p-5 sm:p-6 lg:sticky lg:top-24 shadow-[0_10px_30px_rgba(15,23,42,0.08)] flex flex-col">
+            <div className="mb-4 flex items-center gap-3">
+              <div className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100 text-blue-500">
+                <Calendar className="h-4.5 w-4.5" aria-hidden="true" />
               </div>
-              <Link
-                to="/create-event"
-                aria-label="Create event"
-                title="Create event"
-                className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-blue-600 text-white transition-all duration-200 hover:bg-blue-700 hover:shadow-md hover:-translate-y-0.5"
-              >
-                <Plus className="h-5 w-5" aria-hidden="true" />
-              </Link>
+              <h3 className="text-xl font-bold tracking-tight text-slate-900">My Schedule</h3>
             </div>
 
             {mySchedule.length === 0 ? (
-              <p className="text-slate-500 text-sm leading-relaxed">
-                No events yet.<br />Tap "Count Me In" to add events!
-              </p>
+              <div className="flex flex-col items-center justify-center text-center py-6">
+                <div className="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-full bg-blue-100 text-slate-500">
+                  <Calendar className="h-7 w-7" aria-hidden="true" />
+                </div>
+                <p className="text-2xl font-semibold tracking-tight text-slate-600">No events yet</p>
+                <p className="mt-2 max-w-xs text-sm leading-relaxed text-slate-500">
+                  Hit "Count Me In" to add events to your schedule!
+                </p>
+              </div>
             ) : (
-              <div className="space-y-4 text-sm">
+              <div className="mt-1 space-y-2.5 text-sm">
                 {mySchedule.map(id => {
                   const ev = events.find(e => e.id === id);
                   return ev ? (
-                    <div key={id} className="border-b pb-4 last:border-b-0 last:pb-0 flex items-center justify-between group">
+                    <div key={id} className="rounded-2xl border border-slate-200 bg-white px-3.5 py-2.5 flex items-center justify-between group">
                       <div>
-                        <p className="font-semibold text-slate-900">{ev.title}</p>
-                        <p className="text-slate-500 text-[13px]">{ev.location} • {ev.starts}</p>
+                        <p className="font-semibold text-[15px] text-slate-900">{ev.title}</p>
+                        <p className="text-slate-500 text-xs">{ev.location} • {ev.starts}</p>
                       </div>
                       <button 
                         onClick={() => handleRSVPAction(ev.id)} 
-                        className="opacity-0 group-hover:opacity-100 p-2 text-slate-400 hover:text-red-500 transition-all duration-200 rounded-full hover:bg-red-50"
+                        className="opacity-0 group-hover:opacity-100 p-1.5 text-slate-400 hover:text-red-500 transition-all duration-200 rounded-full hover:bg-red-50"
                         title="Cancel RSVP"
                       >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        <svg className="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                       </button>
                     </div>
                   ) : null;

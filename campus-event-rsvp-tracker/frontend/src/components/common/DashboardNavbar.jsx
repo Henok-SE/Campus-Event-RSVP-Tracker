@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { LogOut, Calendar, Settings, HelpCircle, Bell, Menu, X, Trash2, ClipboardCheck, Sparkles } from 'lucide-react';
+import { LogOut, Calendar, Settings, HelpCircle, Bell, Menu, X, Trash2, ClipboardCheck, Sparkles, Plus } from 'lucide-react';
 import {
   getApiError,
   deleteNotification,
@@ -217,6 +217,15 @@ export default function DashboardNavbar({ rsvpCount }) {
 
         <div className="flex items-center gap-3 md:gap-7" ref={navRef}>
           <div className="hidden md:block text-sm font-medium text-slate-700">{rsvpCount} RSVP'd</div>
+
+          <Link
+            to="/create-event"
+            aria-label="Create event"
+            title="Create event"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-blue-600 text-white transition-all duration-200 hover:bg-blue-700 hover:shadow-md hover:-translate-y-0.5"
+          >
+            <Plus className="h-5 w-5" aria-hidden="true" />
+          </Link>
 
           {/* Notifications Bell */}
           <div className="relative">
