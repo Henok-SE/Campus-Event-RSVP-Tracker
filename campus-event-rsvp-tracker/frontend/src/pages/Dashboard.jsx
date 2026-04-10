@@ -5,9 +5,11 @@ import { Calendar, Clock3, MapPin, Users } from 'lucide-react';
 import DashboardNavbar from '../components/common/DashboardNavbar';
 import Footer from '../components/common/Footer';
 import { useDebounce } from '../hooks/useDebounce';
+import { useNow } from '../hooks/useNow';
 import { useAuth } from '../context/AuthContext';
 import { getEvents, getMyRSVPs, rsvpEvent, cancelRsvp, getApiError } from '../services/api';
 import { mapApiEvent } from '../utils/eventAdapter';
+import { getLiveEventTiming } from '../utils/eventDateTime';
 
 const DEFAULT_CATEGORIES = ['Sports', 'Arts', 'Academic', 'Social', 'Free Food', 'Tech'];
 const RSVP_OPEN_STATUSES = new Set(['Published', 'Ongoing']);
@@ -66,6 +68,8 @@ export default function Dashboard() {
   const [activeCategory, setActiveCategory] = useState('All Events');
 
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
+  const heroNowMs = useNow(1000);
+  const listNowMs = useNow(60_000);
 
   const featuredEvents = useMemo(() => {
     if (events.length === 0) {
@@ -279,6 +283,15 @@ export default function Dashboard() {
     return Math.min(100, Math.round((event.attending / event.capacity) * 100));
   };
 
+  const featuredTiming = featured
+    ? getLiveEventTiming({
+      eventDate: featured.eventDateRaw,
+      time: featured.time,
+      status: featured.status,
+      nowMs: heroNowMs
+    })
+    : null;
+
   return (
     <>
       <DashboardNavbar rsvpCount={rsvpCount} />
@@ -307,7 +320,7 @@ export default function Dashboard() {
                   <div>👥 {featured.attending}{featured.capacity > 0 ? `/${featured.capacity}` : ''} attending</div>
                 </div>
                 <div className="flex flex-col sm:flex-row gap-5">
-                  <div className="font-mono text-4xl sm:text-5xl font-bold tabular-nums tracking-tight">{featured.countdown}</div>
+                  <div className="font-mono text-4xl sm:text-5xl font-bold tabular-nums tracking-tight">{featuredTiming?.countdown ?? '-- : -- : --'}</div>
                   <Link to={`/event/${featured.id}`} className="bg-white text-[#1E3A8A] px-8 py-3.5 rounded-xl font-semibold hover:bg-slate-100 transition-colors">
                     View Details
                   </Link>
@@ -365,7 +378,15 @@ export default function Dashboard() {
                 No events found matching your search.
               </div>
             ) : (
-              filteredEvents.map(event => (
+              filteredEvents.map((event) => {
+                const eventTiming = getLiveEventTiming({
+                  eventDate: event.eventDateRaw,
+                  time: event.time,
+                  status: event.status,
+                  nowMs: listNowMs
+                });
+
+                return (
                   <div key={event.id} className="group bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200">
                   <div className="relative h-56 sm:h-60 overflow-hidden">
                     <img src={event.image} alt={event.title} className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]" />
@@ -381,7 +402,7 @@ export default function Dashboard() {
 
                     <div className="absolute bottom-3 right-3 rounded-full bg-black/55 px-3 py-1 text-xs text-white flex items-center gap-1.5 backdrop-blur-sm">
                       <Clock3 className="h-3.5 w-3.5" />
-                      <span>Starts in {event.starts}</span>
+                      <span>{eventTiming.state === 'upcoming' ? `Starts in ${eventTiming.startsIn}` : eventTiming.startsIn}</span>
                     </div>
                   </div>
 
@@ -428,7 +449,8 @@ export default function Dashboard() {
                     </button>
                   </div>
                 </div>
-              ))
+                );
+              })
             )}
           </div>
 
@@ -455,11 +477,27 @@ export default function Dashboard() {
               <div className="mt-1 space-y-2.5 text-sm">
                 {mySchedule.map(id => {
                   const ev = events.find(e => e.id === id);
-                  return ev ? (
+
+                  if (!ev) {
+                    return null;
+                  }
+
+                  const scheduleTiming = getLiveEventTiming({
+                    eventDate: ev.eventDateRaw,
+                    time: ev.time,
+                    status: ev.status,
+                    nowMs: listNowMs
+                  });
+
+                  return (
                     <div key={id} className="rounded-2xl border border-slate-200 bg-white px-3.5 py-2.5 flex items-center justify-between group">
                       <div>
                         <p className="font-semibold text-[15px] text-slate-900">{ev.title}</p>
-                        <p className="text-slate-500 text-xs">{ev.location} • {ev.starts}</p>
+                        <p className="text-slate-500 text-xs">
+                          {ev.location} • {scheduleTiming.state === 'upcoming'
+                            ? `Starts in ${scheduleTiming.startsIn}`
+                            : scheduleTiming.startsIn}
+                        </p>
                       </div>
                       <button 
                         onClick={() => handleRSVPAction(ev.id)} 
@@ -469,7 +507,7 @@ export default function Dashboard() {
                         <svg className="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                       </button>
                     </div>
-                  ) : null;
+                  );
                 })}
               </div>
             )}
