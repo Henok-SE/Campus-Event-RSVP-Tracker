@@ -1,5 +1,6 @@
 // src/components/common/Footer.jsx
 import { Link } from 'react-router-dom';
+import { Sparkles } from 'lucide-react';
 
 export default function Footer() {
   return (
@@ -8,7 +9,9 @@ export default function Footer() {
         {/* Left - Logo + Description */}
         <div>
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-9 h-9 bg-white rounded-2xl flex items-center justify-center text-[#1E3A8A] font-bold text-2xl">cv</div>
+            <div className="w-9 h-9 bg-white rounded-2xl flex items-center justify-center text-[#1E3A8A]">
+              <Sparkles className="w-4.5 h-4.5" aria-hidden="true" />
+            </div>
             <span className="text-2xl font-semibold">CampusVibe</span>
           </div>
           <p className="text-slate-300 leading-relaxed max-w-xs">

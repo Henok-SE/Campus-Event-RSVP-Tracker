@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { LogOut, Calendar, Settings, HelpCircle, Bell, Menu, X, Trash2, ClipboardCheck } from 'lucide-react';
+import { LogOut, Calendar, Settings, HelpCircle, Bell, Menu, X, Trash2, ClipboardCheck, Sparkles } from 'lucide-react';
 import {
   getApiError,
   deleteNotification,
@@ -205,17 +205,18 @@ export default function DashboardNavbar({ rsvpCount }) {
   };
 
   return (
-    <nav className="bg-white border-b sticky top-0 z-50">
-      <div className="max-w-7xl mx-auto px-6 py-5 flex items-center justify-between">
+    <nav className="sticky top-0 z-50 border-b border-slate-200/80 bg-white/95 backdrop-blur supports-backdrop-filter:bg-white/90 shadow-[0_1px_0_rgba(15,23,42,0.03)]">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
         {/* Logo */}
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 bg-blue-600 rounded-2xl flex items-center justify-center text-white font-bold text-2xl">cv</div>
-          <span className="text-2xl font-semibold tracking-tight">CampusVibe</span>
+          <div className="w-10 h-10 bg-blue-600 rounded-2xl flex items-center justify-center text-white">
+            <Sparkles className="w-5 h-5" aria-hidden="true" />
+          </div>
+          <span className="text-xl sm:text-2xl font-semibold tracking-tight">CampusVibe</span>
         </div>
 
-        <div className="flex items-center gap-4 md:gap-8" ref={navRef}>
-          <Link to="/dashboard" className="hidden md:block font-medium text-slate-700 hover:text-slate-900">Events</Link>
-          <div className="hidden md:block font-medium text-slate-700">{rsvpCount} RSVP'd</div>
+        <div className="flex items-center gap-3 md:gap-7" ref={navRef}>
+          <div className="hidden md:block text-sm font-medium text-slate-700">{rsvpCount} RSVP'd</div>
 
           {/* Notifications Bell */}
           <div className="relative">
@@ -229,50 +230,50 @@ export default function DashboardNavbar({ rsvpCount }) {
                 }
               }}
               aria-label="Notifications"
-              className="relative p-2 text-slate-600 hover:text-slate-900 transition-colors"
+              className="relative p-2 rounded-full text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-all duration-200"
             >
               <Bell className="w-6 h-6" />
               {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full">
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold min-w-5 h-5 px-1 flex items-center justify-center rounded-full shadow-sm">
                   {unreadCount}
                 </span>
               )}
             </button>
 
             {notificationsOpen && (
-              <div className="absolute right-0 mt-2 w-80 bg-white rounded-2xl shadow-xl border border-slate-200 py-2 z-50 max-h-105 overflow-auto">
-                <div className="px-6 py-3 border-b flex items-center justify-between">
+              <div className="absolute right-0 mt-3 w-80 bg-white rounded-2xl shadow-lg border border-slate-200 py-2 z-50 max-h-105 overflow-auto">
+                <div className="px-5 py-3 border-b flex items-center justify-between">
                   <h3 className="font-semibold">Notifications</h3>
                   {unreadCount > 0 && (
-                    <button onClick={markAllAsRead} className="text-xs text-blue-600 hover:underline">
+                    <button onClick={markAllAsRead} className="text-xs font-medium text-blue-600 hover:underline">
                       Mark all read
                     </button>
                   )}
                 </div>
 
                 {notificationsLoading ? (
-                  <p className="text-center py-8 text-slate-500">Loading notifications...</p>
+                  <p className="text-center py-8 text-sm text-slate-500">Loading notifications...</p>
                 ) : notificationsError ? (
-                  <div className="px-6 py-5">
+                  <div className="px-5 py-5">
                     <p className="text-sm text-red-600">{notificationsError}</p>
                     <button onClick={fetchNotifications} className="mt-2 text-xs text-blue-600 hover:underline">
                       Retry
                     </button>
                   </div>
                 ) : notifications.length === 0 ? (
-                  <p className="text-center py-8 text-slate-500">No new notifications</p>
+                  <p className="text-center py-8 text-sm text-slate-500">No new notifications</p>
                 ) : (
                   notifications.map(notif => (
                     <div 
                       key={notif.id}
                       onClick={() => handleNotificationClick(notif)}
-                      className={`px-6 py-4 hover:bg-slate-50 cursor-pointer border-b last:border-b-0 ${!notif.read ? 'bg-blue-50' : ''}`}
+                      className={`px-5 py-4 hover:bg-slate-50 transition-colors cursor-pointer border-b last:border-b-0 ${!notif.read ? 'bg-blue-50' : ''}`}
                     >
                       <div className="flex items-start justify-between gap-4">
                         <div className="min-w-0">
-                          <p className="text-xs uppercase tracking-wide text-slate-500">{notif.title}</p>
-                          <p className="text-sm text-slate-700">{notif.message}</p>
-                          <p className="text-xs text-slate-500 mt-1">{formatNotificationTime(notif.created_at)}</p>
+                          <p className="text-xs uppercase tracking-[0.08em] font-medium text-slate-500">{notif.title}</p>
+                          <p className="text-sm text-slate-700 leading-relaxed">{notif.message}</p>
+                          <p className="text-xs text-slate-500 mt-1.5">{formatNotificationTime(notif.created_at)}</p>
                         </div>
 
                         <button
@@ -282,7 +283,7 @@ export default function DashboardNavbar({ rsvpCount }) {
                             handleDeleteNotification(notif.id);
                           }}
                           disabled={deletingNotificationId === notif.id}
-                          className="shrink-0 rounded-full p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 disabled:opacity-50"
+                          className="shrink-0 rounded-full p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50"
                           aria-label="Delete notification"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -303,14 +304,14 @@ export default function DashboardNavbar({ rsvpCount }) {
                 if (!profileOpen) setNotificationsOpen(false);
               }}
               aria-label="Profile menu"
-              className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white font-semibold hover:bg-blue-700 transition-colors"
+              className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white font-semibold hover:bg-blue-700 transition-all duration-200 shadow-sm hover:shadow-md"
             >
               {user?.name?.charAt(0) || 'H'}
             </button>
 
             {profileOpen && (
-              <div className="absolute right-0 mt-2 w-72 bg-white rounded-2xl shadow-xl border border-slate-200 py-2 z-50">
-                <div className="px-6 py-4 border-b">
+              <div className="absolute right-0 mt-3 w-72 bg-white rounded-2xl shadow-lg border border-slate-200 py-2 z-50">
+                <div className="px-5 py-4 border-b">
                   <div className="flex items-center gap-3">
                     <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold text-2xl">
                       {user?.name?.charAt(0) || 'H'}
@@ -323,16 +324,16 @@ export default function DashboardNavbar({ rsvpCount }) {
                   </div>
                 </div>
 
-                <Link to="/my-schedule" onClick={() => setProfileOpen(false)} className="flex items-center gap-3 px-6 py-4 hover:bg-slate-100">
+                <Link to="/my-schedule" onClick={() => setProfileOpen(false)} className="flex items-center gap-3 px-5 py-3.5 hover:bg-slate-50 transition-colors">
                   <Calendar className="w-5 h-5" /> My Schedule
                 </Link>
 
-                <Link to="/profile-settings" onClick={() => setProfileOpen(false)} className="flex items-center gap-3 px-6 py-4 hover:bg-slate-100">
+                <Link to="/profile-settings" onClick={() => setProfileOpen(false)} className="flex items-center gap-3 px-5 py-3.5 hover:bg-slate-50 transition-colors">
                   <Settings className="w-5 h-5" /> Profile Settings
                 </Link>
 
                 {user?.role === 'Admin' ? (
-                  <Link to="/admin/review" onClick={() => setProfileOpen(false)} className="flex items-center gap-3 px-6 py-4 hover:bg-slate-100">
+                  <Link to="/admin/review" onClick={() => setProfileOpen(false)} className="flex items-center gap-3 px-5 py-3.5 hover:bg-slate-50 transition-colors">
                     <ClipboardCheck className="w-5 h-5" /> Admin Review
                   </Link>
                 ) : null}
@@ -340,14 +341,14 @@ export default function DashboardNavbar({ rsvpCount }) {
                 <a
                   href="mailto:support@campusvibe.edu.et"
                   onClick={() => setProfileOpen(false)}
-                  className="flex items-center gap-3 px-6 py-4 hover:bg-slate-100"
+                  className="flex items-center gap-3 px-5 py-3.5 hover:bg-slate-50 transition-colors"
                 >
                   <HelpCircle className="w-5 h-5" /> Help & Support
                 </a>
 
                 <div className="border-t my-2"></div>
 
-                <button onClick={handleLogout} className="flex items-center gap-3 w-full px-6 py-4 text-red-600 hover:bg-red-50">
+                <button onClick={handleLogout} className="flex items-center gap-3 w-full px-5 py-3.5 text-red-600 hover:bg-red-50 transition-colors">
                   <LogOut className="w-5 h-5" /> Logout
                 </button>
               </div>
@@ -356,7 +357,8 @@ export default function DashboardNavbar({ rsvpCount }) {
 
           {/* Mobile Overlay Menu Toggle */}
           <button 
-            className="md:hidden p-2 text-slate-600 hover:text-slate-900"
+            type="button"
+            className="md:hidden p-2 rounded-full text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-all duration-200"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             aria-label="Toggle mobile menu"
           >
@@ -367,12 +369,11 @@ export default function DashboardNavbar({ rsvpCount }) {
 
       {/* Mobile Menu Dropdown contents */}
       {mobileMenuOpen && (
-        <div className="md:hidden absolute top-full left-0 w-full bg-white border-b shadow-xl px-6 py-6 flex flex-col gap-5 z-10 animate-in slide-in-from-top-2">
-          <Link to="/dashboard" onClick={() => setMobileMenuOpen(false)} className="text-lg font-medium hover:text-blue-600">Events Feed</Link>
+        <div className="md:hidden absolute top-full left-0 w-full bg-white/95 backdrop-blur border-b border-slate-200 shadow-lg px-6 py-5 flex flex-col gap-4 z-10 animate-in slide-in-from-top-2">
           {user?.role === 'Admin' ? (
-            <Link to="/admin/review" onClick={() => setMobileMenuOpen(false)} className="text-lg font-medium hover:text-blue-600">Admin Review</Link>
+            <Link to="/admin/review" onClick={() => setMobileMenuOpen(false)} className="text-base font-medium hover:text-blue-600 transition-colors">Admin Review</Link>
           ) : null}
-          <div className="text-lg font-medium text-slate-500">You have {rsvpCount} active RSVPs</div>
+          <div className="text-base font-medium text-slate-500">You have {rsvpCount} active RSVPs</div>
         </div>
       )}
     </nav>

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, X } from 'lucide-react';
+import { Menu, X, Sparkles } from 'lucide-react';
 
 export default function PublicNavbar() {
   const [isOpen, setIsOpen] = useState(false);
@@ -27,7 +27,9 @@ export default function PublicNavbar() {
     <nav className={`${navBaseClass} top-0 z-50 transition-all duration-300 ${navBgClass}`}>
       <div className={`max-w-7xl mx-auto px-6 py-5 flex items-center justify-between relative z-20 ${isTransparent ? 'bg-transparent' : 'bg-white'}`}>
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 bg-blue-600 rounded-2xl flex items-center justify-center text-white font-bold text-2xl">cv</div>
+          <div className="w-9 h-9 bg-blue-600 rounded-2xl flex items-center justify-center text-white">
+            <Sparkles className="w-4.5 h-4.5" aria-hidden="true" />
+          </div>
           <span className="text-2xl font-semibold tracking-tight">CampusVibe</span>
         </div>
 
