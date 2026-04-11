@@ -110,7 +110,7 @@ export default function CreateEvent() {
       setSuccessMessage(
         isAdmin
           ? 'Event created and published successfully! Redirecting to details...'
-          : 'Event submitted for admin review. Redirecting to details...'
+          : 'Event submitted for admin review. It is visible to you while pending. Redirecting to details...'
       );
 
       const createdId = createdEvent?._id || createdEvent?.id;

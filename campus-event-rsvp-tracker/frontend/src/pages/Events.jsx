@@ -5,7 +5,6 @@ import { getApiError, getEvents } from '../services/api';
 import { mapApiEvent } from '../utils/eventAdapter';
 
 const categories = ["All Events", "Sports", "Arts", "Academic", "Social", "Free Food", "Tech"];
-const PUBLIC_EVENT_STATUSES = new Set(['Published', 'Ongoing']);
 
 export default function Events() {
   const [events, setEvents] = useState([]);
@@ -25,9 +24,7 @@ export default function Events() {
         const response = await getEvents();
         const apiEvents = Array.isArray(response?.data?.data) ? response.data.data : [];
 
-        const mapped = apiEvents
-          .filter((event) => PUBLIC_EVENT_STATUSES.has(event.status))
-          .map((event) => mapApiEvent(event));
+        const mapped = apiEvents.map((event) => mapApiEvent(event));
 
         if (!isMounted) {
           return;

@@ -3,8 +3,11 @@ const RSVP = require("../models/rsvp");
 const Notification = require("../models/notification");
 const User = require("../models/users");
 const mongoose = require("mongoose");
+const path = require("path");
 const { sendSuccess, sendError } = require("../utils/apiResponse");
 const { FIXED_INTEREST_CATEGORY_LOOKUP } = require("../config/interestOptions");
+const { getConfig } = require("../config/env");
+const { uploadBufferToCloudinary } = require("../utils/cloudinary");
 
 const PUBLIC_EVENT_STATUSES = ["Published", "Ongoing"];
 const REVIEWABLE_EVENT_STATUS = "Pending";
@@ -249,15 +252,45 @@ exports.uploadEventImage = async (req, res) => {
       });
     }
 
-    const filePath = `/uploads/events/${req.file.filename}`;
-    const imageUrl = `${req.protocol}://${req.get("host")}${filePath}`;
+    const config = getConfig();
+
+    if (config.imageStorage === "cloudinary") {
+      if (!req.file.buffer) {
+        return sendError(res, {
+          status: 400,
+          code: "VALIDATION_ERROR",
+          message: "Cloud image upload requires a valid file"
+        });
+      }
+
+      const uploaded = await uploadBufferToCloudinary({
+        fileBuffer: req.file.buffer,
+        folder: config.cloudinary.folder,
+        originalFilename: req.file.originalname
+      });
+
+      return sendSuccess(res, {
+        status: 201,
+        message: "Image uploaded",
+        data: {
+          image_url: uploaded.secure_url,
+          file_path: null,
+          provider: "cloudinary",
+          public_id: uploaded.public_id
+        }
+      });
+    }
+
+    const fileName = req.file.filename || path.basename(req.file.path || "");
+    const filePath = `/uploads/events/${fileName}`;
 
     return sendSuccess(res, {
       status: 201,
       message: "Image uploaded",
       data: {
-        image_url: imageUrl,
-        file_path: filePath
+        image_url: filePath,
+        file_path: filePath,
+        provider: "local"
       }
     });
   } catch (err) {

@@ -4,6 +4,8 @@ const multer = require("multer");
 
 const EVENT_UPLOAD_DIR = path.join(__dirname, "..", "uploads", "events");
 const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
+const IMAGE_STORAGE_LOCAL = "local";
+const IMAGE_STORAGE_CLOUDINARY = "cloudinary";
 const ALLOWED_MIME_TYPES = new Set([
   "image/jpeg",
   "image/png",
@@ -11,9 +13,18 @@ const ALLOWED_MIME_TYPES = new Set([
   "image/gif"
 ]);
 
-fs.mkdirSync(EVENT_UPLOAD_DIR, { recursive: true });
+const getImageStorageMode = () => {
+  const rawValue = String(process.env.IMAGE_STORAGE || IMAGE_STORAGE_LOCAL).trim().toLowerCase();
+  return rawValue === IMAGE_STORAGE_CLOUDINARY ? IMAGE_STORAGE_CLOUDINARY : IMAGE_STORAGE_LOCAL;
+};
 
-const storage = multer.diskStorage({
+const activeImageStorageMode = getImageStorageMode();
+
+if (activeImageStorageMode === IMAGE_STORAGE_LOCAL) {
+  fs.mkdirSync(EVENT_UPLOAD_DIR, { recursive: true });
+}
+
+const diskStorage = multer.diskStorage({
   destination: (_req, _file, cb) => {
     cb(null, EVENT_UPLOAD_DIR);
   },
@@ -34,6 +45,10 @@ const fileFilter = (_req, file, cb) => {
   cb(null, true);
 };
 
+const storage = activeImageStorageMode === IMAGE_STORAGE_CLOUDINARY
+  ? multer.memoryStorage()
+  : diskStorage;
+
 const uploadEventImage = multer({
   storage,
   fileFilter,
@@ -44,5 +59,8 @@ const uploadEventImage = multer({
 
 module.exports = {
   uploadEventImage,
-  MAX_IMAGE_SIZE_BYTES
+  MAX_IMAGE_SIZE_BYTES,
+  IMAGE_STORAGE_LOCAL,
+  IMAGE_STORAGE_CLOUDINARY,
+  getImageStorageMode
 };
