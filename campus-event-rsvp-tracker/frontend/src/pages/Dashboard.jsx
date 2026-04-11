@@ -1,15 +1,40 @@
 // src/pages/Dashboard.jsx
 import { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { Calendar, Clock3, MapPin, Users } from 'lucide-react';
 import DashboardNavbar from '../components/common/DashboardNavbar';
 import Footer from '../components/common/Footer';
 import { useDebounce } from '../hooks/useDebounce';
+import { useNow } from '../hooks/useNow';
 import { useAuth } from '../context/AuthContext';
 import { getEvents, getMyRSVPs, rsvpEvent, cancelRsvp, getApiError } from '../services/api';
 import { mapApiEvent } from '../utils/eventAdapter';
+import { getLiveEventTiming } from '../utils/eventDateTime';
 
 const DEFAULT_CATEGORIES = ['Sports', 'Arts', 'Academic', 'Social', 'Free Food', 'Tech'];
 const RSVP_OPEN_STATUSES = new Set(['Published', 'Ongoing']);
+
+const tagToneClass = (tag) => {
+  const value = String(tag || '').toLowerCase();
+
+  if (value.includes('free food')) {
+    return 'bg-orange-500/90 text-white';
+  }
+
+  if (value.includes('academic')) {
+    return 'bg-amber-500/90 text-white';
+  }
+
+  if (value.includes('arts')) {
+    return 'bg-pink-500/90 text-white';
+  }
+
+  if (value.includes('tech')) {
+    return 'bg-sky-500/90 text-white';
+  }
+
+  return 'bg-blue-600/90 text-white';
+};
 
 const isEventRsvpAvailable = (event) => {
   if (!event) {
@@ -43,6 +68,8 @@ export default function Dashboard() {
   const [activeCategory, setActiveCategory] = useState('All Events');
 
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
+  const heroNowMs = useNow(1000);
+  const listNowMs = useNow(60_000);
 
   const featuredEvents = useMemo(() => {
     if (events.length === 0) {
@@ -240,6 +267,31 @@ export default function Dashboard() {
     });
   }, [events, debouncedSearchTerm, activeCategory]);
 
+  const formatSeatsLeft = (event) => {
+    if (event.capacity > 0 && Number.isInteger(event.seatsLeft)) {
+      return `${event.seatsLeft} seats left`;
+    }
+
+    return 'Open seats';
+  };
+
+  const getSeatFillPercent = (event) => {
+    if (!event.capacity || event.capacity <= 0) {
+      return 100;
+    }
+
+    return Math.min(100, Math.round((event.attending / event.capacity) * 100));
+  };
+
+  const featuredTiming = featured
+    ? getLiveEventTiming({
+      eventDate: featured.eventDateRaw,
+      time: featured.time,
+      status: featured.status,
+      nowMs: heroNowMs
+    })
+    : null;
+
   return (
     <>
       <DashboardNavbar rsvpCount={rsvpCount} />
@@ -249,34 +301,34 @@ export default function Dashboard() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-8">
           {featured ? (
             <div 
-              className="bg-[#1E3A8A] text-white rounded-3xl overflow-hidden relative shadow-lg"
+              className="bg-[#1E3A8A] text-white rounded-3xl overflow-hidden relative shadow-md"
               style={{ backgroundImage: `url('${featured.image}')`, backgroundSize: 'cover' }}
             >
               <div className="absolute inset-0 bg-linear-to-b from-black/40 to-black/70" />
-              <div className="relative z-10 p-6 sm:p-10 md:p-12">
+              <div className="relative z-10 p-6 sm:p-8 md:p-10">
                 <div className="flex flex-wrap gap-3 mb-5">
                   {featured.tags.map((tag, idx) => (
-                    <span key={`${tag}-${idx}`} className="bg-white/20 px-4 py-1 rounded-full text-sm font-medium">
+                    <span key={`${tag}-${idx}`} className="bg-white/20 px-3 py-1 rounded-full text-xs sm:text-sm font-medium">
                       {tag}
                     </span>
                   ))}
                 </div>
-                <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold leading-tight mb-4">{featured.title}</h1>
-                <p className="text-base sm:text-lg md:text-xl mb-6 max-w-3xl">{featured.desc}</p>
-                <div className="flex flex-wrap gap-6 text-sm mb-8">
+                <h1 className="text-3xl sm:text-4xl md:text-5xl font-semibold leading-tight mb-4">{featured.title}</h1>
+                <p className="text-base sm:text-lg md:text-xl leading-relaxed mb-6 max-w-3xl">{featured.desc}</p>
+                <div className="flex flex-wrap gap-6 text-sm text-white/90 mb-8">
                   <div>📍 {featured.location}</div>
                   <div>👥 {featured.attending}{featured.capacity > 0 ? `/${featured.capacity}` : ''} attending</div>
                 </div>
                 <div className="flex flex-col sm:flex-row gap-5">
-                  <div className="font-mono text-4xl sm:text-5xl font-bold tabular-nums">{featured.countdown}</div>
-                  <Link to={`/event/${featured.id}`} className="bg-white text-[#1E3A8A] px-8 py-4 rounded-2xl font-semibold hover:bg-slate-100 transition-all">
+                  <div className="font-mono text-4xl sm:text-5xl font-bold tabular-nums tracking-tight">{featuredTiming?.countdown ?? '-- : -- : --'}</div>
+                  <Link to={`/event/${featured.id}`} className="bg-white text-[#1E3A8A] px-8 py-3.5 rounded-xl font-semibold hover:bg-slate-100 transition-colors">
                     View Details
                   </Link>
                 </div>
               </div>
             </div>
           ) : (
-            <div className="bg-slate-100 text-slate-500 rounded-3xl p-12 text-center">
+            <div className="bg-slate-100 text-slate-500 rounded-3xl p-10 text-center">
               No featured events yet.
             </div>
           )}
@@ -290,15 +342,15 @@ export default function Dashboard() {
               placeholder="Search events..." 
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full sm:flex-1 bg-white border border-slate-200 rounded-2xl px-6 py-4 text-base focus:outline-none focus:border-blue-600"
+              className="w-full sm:flex-1 bg-white border border-slate-200 rounded-xl px-5 py-3.5 text-sm sm:text-base focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 transition-colors"
             />
             <div className="flex flex-wrap gap-3">
               {categories.map(cat => (
                 <button 
                   key={cat}
                   onClick={() => setActiveCategory(cat)}
-                  className={`px-5 py-3 rounded-2xl text-sm font-medium transition-all ${
-                    activeCategory === cat ? "bg-blue-600 text-white shadow-md" : "bg-slate-100 hover:bg-slate-200 text-slate-700"
+                  className={`px-5 py-3 rounded-xl text-sm font-medium transition-all duration-200 hover:-translate-y-0.5 ${
+                    activeCategory === cat ? "bg-blue-600 text-white shadow-sm" : "bg-slate-100 hover:bg-slate-200 text-slate-700"
                   }`}
                 >
                   {cat}
@@ -309,8 +361,8 @@ export default function Dashboard() {
         </div>
 
         {/* Events Grid + My Schedule */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 pb-20 grid lg:grid-cols-4 gap-8">
-          <div className="lg:col-span-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 pb-20 grid lg:grid-cols-3 gap-8 items-start">
+          <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-7">
             {errorMessage ? (
               <div className="col-span-full rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-700">
                 {errorMessage}
@@ -326,99 +378,140 @@ export default function Dashboard() {
                 No events found matching your search.
               </div>
             ) : (
-              filteredEvents.map(event => (
-                <div key={event.id} className="bg-white border border-slate-200 rounded-3xl overflow-hidden hover:shadow-lg transition-all">
-                  <div className="p-5 sm:p-6">
-                    <div className="flex flex-wrap gap-2 mb-4">
-                      {event.tags.map((tag, idx) => (
-                        <span key={`${tag}-${idx}`} className={`text-xs px-3 py-1 rounded-full ${
-                          tag === "Free Food" ? "bg-orange-100 text-orange-700" :
-                          tag === "Arts" ? "bg-pink-100 text-pink-700" :
-                          tag === "Academic" ? "bg-blue-100 text-blue-700" : "bg-teal-100 text-teal-700"
-                        }`}>
+              filteredEvents.map((event) => {
+                const eventTiming = getLiveEventTiming({
+                  eventDate: event.eventDateRaw,
+                  time: event.time,
+                  status: event.status,
+                  nowMs: listNowMs
+                });
+
+                return (
+                  <div key={event.id} className="group bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200">
+                  <div className="relative h-56 sm:h-60 overflow-hidden">
+                    <img src={event.image} alt={event.title} className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]" />
+                    <div className="absolute inset-0 bg-linear-to-b from-black/10 via-black/25 to-black/50" />
+
+                    <div className="absolute top-3 left-3 flex flex-wrap gap-2 pr-3">
+                      {(event.tags || []).slice(0, 2).map((tag, idx) => (
+                        <span key={`${tag}-${idx}`} className={`text-xs px-2.5 py-1 rounded-full font-semibold ${tagToneClass(tag)}`}>
                           {tag}
                         </span>
                       ))}
                     </div>
 
-                    <h3 className="font-semibold text-lg sm:text-xl mb-2 line-clamp-2">{event.title}</h3>
-                    <p className="text-slate-600 text-sm mb-6 line-clamp-3">{event.desc}</p>
-
-                    <div className="flex justify-between text-xs text-slate-500 mb-6">
-                      <div>📍 {event.location}</div>
-                      <div>👥 {event.attending}{event.capacity > 0 ? `/${event.capacity}` : ''}</div>
-                    </div>
-
-                    <div className="text-xs text-slate-500 mb-6">⏳ Starts in {event.starts}</div>
-
-                    <div className="flex gap-3">
-                      <Link 
-                        to={`/event/${event.id}`}
-                        className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3.5 rounded-2xl font-medium text-center text-sm transition-all"
-                      >
-                        View Details
-                      </Link>
-
-                      <button
-                        onClick={() => event.rsvpStatus !== "rsvpd" && handleRSVPAction(event.id)}
-                        disabled={event.rsvpStatus === "rsvpd" || !isEventRsvpAvailable(event)}
-                        className={`flex-1 py-3.5 rounded-2xl font-medium text-sm transition-all ${
-                          event.rsvpStatus === "rsvpd" 
-                            ? "bg-slate-100 text-slate-500 cursor-not-allowed" 
-                            : !isEventRsvpAvailable(event)
-                              ? "bg-slate-100 text-slate-500 cursor-not-allowed"
-                              : "bg-blue-600 hover:bg-blue-700 text-white"
-                        }`}
-                      >
-                        {event.rsvpStatus === "rsvpd" ? "RSVP'd" : isEventRsvpAvailable(event) ? "Count Me In" : "RSVP Unavailable"}
-                      </button>
+                    <div className="absolute bottom-3 right-3 rounded-full bg-black/55 px-3 py-1 text-xs text-white flex items-center gap-1.5 backdrop-blur-sm">
+                      <Clock3 className="h-3.5 w-3.5" />
+                      <span>{eventTiming.state === 'upcoming' ? `Starts in ${eventTiming.startsIn}` : eventTiming.startsIn}</span>
                     </div>
                   </div>
+
+                  <div className="p-4 sm:p-5 bg-slate-50/60">
+                    <h3 className="font-semibold text-xl sm:text-2xl mb-2.5 tracking-tight text-slate-900 line-clamp-2">{event.title}</h3>
+                    <p className="text-slate-600 text-sm sm:text-base leading-relaxed mb-4 line-clamp-2">{event.desc}</p>
+
+                    <div className="mb-3 flex items-center gap-2 text-slate-600">
+                      <MapPin className="h-4.5 w-4.5 shrink-0" />
+                      <span className="text-sm sm:text-base font-medium line-clamp-1">{event.location}</span>
+                    </div>
+
+                    <div className="mb-2.5 flex items-center justify-between text-slate-600">
+                      <div className="flex items-center gap-2">
+                        <Users className="h-4.5 w-4.5" />
+                        <span className="text-sm sm:text-base font-medium">{event.attending}{event.capacity > 0 ? `/${event.capacity}` : ''}</span>
+                      </div>
+                      <span className="text-sm sm:text-base font-medium">{formatSeatsLeft(event)}</span>
+                    </div>
+
+                    <div className="mb-4 h-2 rounded-full bg-blue-100 overflow-hidden">
+                      <div
+                        className="h-full bg-linear-to-r from-blue-500 to-cyan-500"
+                        style={{ width: `${getSeatFillPercent(event)}%` }}
+                      />
+                    </div>
+
+                    <button
+                      onClick={() => event.rsvpStatus !== 'rsvpd' && handleRSVPAction(event.id)}
+                      disabled={event.rsvpStatus === 'rsvpd' || !isEventRsvpAvailable(event)}
+                      className={`w-full py-3.5 rounded-xl font-semibold text-base transition-all duration-200 ${
+                        event.rsvpStatus === 'rsvpd'
+                          ? 'bg-slate-200 text-slate-600 cursor-not-allowed'
+                          : !isEventRsvpAvailable(event)
+                            ? 'bg-slate-200 text-slate-600 cursor-not-allowed'
+                            : 'bg-blue-500 hover:bg-blue-600 text-white hover:shadow-md cursor-pointer'
+                      }`}
+                    >
+                      {event.rsvpStatus === 'rsvpd'
+                        ? `RSVP'd${event.capacity > 0 ? ` · ${formatSeatsLeft(event)}` : ''}`
+                        : isEventRsvpAvailable(event)
+                          ? `Count Me In${event.capacity > 0 ? ` · ${formatSeatsLeft(event)}` : ''}`
+                          : 'RSVP Unavailable'}
+                    </button>
+                  </div>
                 </div>
-              ))
+                );
+              })
             )}
           </div>
 
           {/* My Schedule Sidebar */}
-          <div className="bg-white border border-slate-200 rounded-3xl p-6 h-fit lg:sticky lg:top-8">
-            <div className="flex items-center gap-3 mb-6">
-              <span className="text-3xl">📅</span>
-              <h3 className="text-2xl font-semibold">My Schedule ({mySchedule.length})</h3>
+          <div className="self-start h-fit border border-slate-200 bg-slate-50/70 rounded-3xl p-5 sm:p-6 lg:sticky lg:top-24 shadow-[0_10px_30px_rgba(15,23,42,0.08)] flex flex-col">
+            <div className="mb-4 flex items-center gap-3">
+              <div className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100 text-blue-500">
+                <Calendar className="h-4.5 w-4.5" aria-hidden="true" />
+              </div>
+              <h3 className="text-xl font-bold tracking-tight text-slate-900">My Schedule</h3>
             </div>
 
             {mySchedule.length === 0 ? (
-              <p className="text-slate-500 text-sm leading-relaxed">
-                No events yet.<br />Tap "Count Me In" to add events!
-              </p>
+              <div className="flex flex-col items-center justify-center text-center py-6">
+                <div className="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-full bg-blue-100 text-slate-500">
+                  <Calendar className="h-7 w-7" aria-hidden="true" />
+                </div>
+                <p className="text-2xl font-semibold tracking-tight text-slate-600">No events yet</p>
+                <p className="mt-2 max-w-xs text-sm leading-relaxed text-slate-500">
+                  Hit "Count Me In" to add events to your schedule!
+                </p>
+              </div>
             ) : (
-              <div className="space-y-4 text-sm">
+              <div className="mt-1 space-y-2.5 text-sm">
                 {mySchedule.map(id => {
                   const ev = events.find(e => e.id === id);
-                  return ev ? (
-                    <div key={id} className="border-b pb-3 last:border-b-0 last:pb-0 flex items-center justify-between group">
+
+                  if (!ev) {
+                    return null;
+                  }
+
+                  const scheduleTiming = getLiveEventTiming({
+                    eventDate: ev.eventDateRaw,
+                    time: ev.time,
+                    status: ev.status,
+                    nowMs: listNowMs
+                  });
+
+                  return (
+                    <div key={id} className="rounded-2xl border border-slate-200 bg-white px-3.5 py-2.5 flex items-center justify-between group">
                       <div>
-                        <p className="font-medium">{ev.title}</p>
-                        <p className="text-slate-500">{ev.location} • {ev.starts}</p>
+                        <p className="font-semibold text-[15px] text-slate-900">{ev.title}</p>
+                        <p className="text-slate-500 text-xs">
+                          {ev.location} • {scheduleTiming.state === 'upcoming'
+                            ? `Starts in ${scheduleTiming.startsIn}`
+                            : scheduleTiming.startsIn}
+                        </p>
                       </div>
                       <button 
                         onClick={() => handleRSVPAction(ev.id)} 
-                        className="opacity-0 group-hover:opacity-100 p-2 text-slate-400 hover:text-red-500 transition-all rounded-full hover:bg-red-50"
+                        className="opacity-0 group-hover:opacity-100 p-1.5 text-slate-400 hover:text-red-500 transition-all duration-200 rounded-full hover:bg-red-50"
                         title="Cancel RSVP"
                       >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        <svg className="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                       </button>
                     </div>
-                  ) : null;
+                  );
                 })}
               </div>
             )}
 
-            <Link 
-              to="/create-event"
-              className="mt-8 block w-full bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-2xl font-semibold text-center text-sm transition-all"
-            >
-              Host an Event
-            </Link>
           </div>
         </div>
       </div>

@@ -5,7 +5,9 @@ import { useAuth } from '../context/AuthContext';
 import { MapPin, Users, Clock } from 'lucide-react';
 import Footer from '../components/common/Footer';
 import { cancelRsvp, deleteEvent, getApiError, getEventById, getMyRSVPs, resubmitEventForReview, rsvpEvent } from '../services/api';
+import { useNow } from '../hooks/useNow';
 import { mapApiEvent } from '../utils/eventAdapter';
+import { getLiveEventTiming } from '../utils/eventDateTime';
 
 const RSVP_OPEN_STATUSES = new Set(['Published', 'Ongoing']);
 
@@ -22,6 +24,7 @@ export default function EventDetails() {
   const [resubmitLoading, setResubmitLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [actionErrorMessage, setActionErrorMessage] = useState('');
+  const detailNowMs = useNow(60_000);
 
   useEffect(() => {
     let isMounted = true;
@@ -214,6 +217,12 @@ export default function EventDetails() {
   const isConfirmed = rsvpStatus === 'confirmed';
   const isOwner = Boolean(user?.id && event?.createdBy && String(user.id) === String(event.createdBy));
   const canResubmit = isOwner && event.status === 'Rejected';
+  const eventTiming = getLiveEventTiming({
+    eventDate: event.eventDateRaw,
+    time: event.time,
+    status: event.status,
+    nowMs: detailNowMs
+  });
 
   return (
     <div className="bg-gray-50 min-h-screen">
@@ -280,6 +289,11 @@ export default function EventDetails() {
                   <Clock size={16} /> When
                 </p>
                 <p className="font-medium">{event.date}{event.time && event.time !== 'TBA' ? ` • ${event.time}` : ''}</p>
+                <p className="mt-1 text-sm text-blue-700 font-medium">
+                  {eventTiming.state === 'upcoming'
+                    ? `Starts in ${eventTiming.startsIn}`
+                    : eventTiming.startsIn}
+                </p>
               </div>
               <div>
                 <p className="text-gray-500 mb-1 flex items-center gap-2">

@@ -1,3 +1,5 @@
+import { getLiveEventTiming } from './eventDateTime';
+
 const DEFAULT_CATEGORY = "General";
 
 const pad2 = (value) => String(value).padStart(2, "0");
@@ -101,6 +103,12 @@ export const mapApiEvent = (event = {}, { rsvpSet = new Set() } = {}) => {
   const seatsLeft = capacity > 0 ? Math.max(0, capacity - attending) : null;
   const date = formatDate(event.event_date);
   const time = event.time || "TBA";
+  const eventDateRaw = event.event_date || null;
+  const timing = getLiveEventTiming({
+    eventDate: eventDateRaw,
+    time,
+    status: event.status
+  });
 
   return {
     id,
@@ -109,11 +117,12 @@ export const mapApiEvent = (event = {}, { rsvpSet = new Set() } = {}) => {
     description: event.description || "No description available yet.",
     location: event.location || "Location to be announced",
     date,
+    eventDateRaw,
     time,
     attending,
     capacity,
-    starts: getStartsIn(event.event_date),
-    countdown: getCountdown(event.event_date),
+    starts: timing.startsIn,
+    countdown: timing.countdown,
     seatsLeft,
     tags,
     tag: category,
