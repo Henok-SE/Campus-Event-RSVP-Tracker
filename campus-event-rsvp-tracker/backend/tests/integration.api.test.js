@@ -350,6 +350,61 @@ describe("Backend integration tests", () => {
     removeUploadedFile(uploadRes.body.data.file_path);
   });
 
+  test("upload image then create event then fetch owner events keeps image_url", async () => {
+    const hashed = await bcrypt.hash("pass1234", 10);
+
+    const user = await User.create({
+      name: "Upload Create Owner",
+      email: "upload-create-owner@example.com",
+      student_id: "3321/18",
+      password: hashed,
+      role: "Student"
+    });
+
+    const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET);
+
+    const uploadRes = await request(app)
+      .post("/api/events/upload-image")
+      .set("Authorization", `Bearer ${token}`)
+      .attach("image", Buffer.from("png-binary"), "owner-event.png");
+
+    expect(uploadRes.status).toBe(201);
+    expect(uploadRes.body.success).toBe(true);
+    expect(uploadRes.body.data.image_url).toContain("/uploads/events/");
+
+    const imageUrl = uploadRes.body.data.image_url;
+    const filePath = uploadRes.body.data.file_path;
+
+    const createRes = await request(app)
+      .post("/api/events")
+      .set("Authorization", `Bearer ${token}`)
+      .send({
+        title: "Image E2E Event",
+        description: "Created from uploaded image",
+        image_url: imageUrl,
+        category: "Tech",
+        tags: ["Tech"]
+      });
+
+    expect(createRes.status).toBe(201);
+    expect(createRes.body.success).toBe(true);
+    expect(createRes.body.data.status).toBe("Pending");
+    expect(createRes.body.data.image_url).toBe(imageUrl);
+
+    const ownerListRes = await request(app)
+      .get("/api/events")
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(ownerListRes.status).toBe(200);
+    expect(ownerListRes.body.success).toBe(true);
+
+    const createdEvent = ownerListRes.body.data.find((item) => item.title === "Image E2E Event");
+    expect(createdEvent).toBeDefined();
+    expect(createdEvent.image_url).toBe(imageUrl);
+
+    removeUploadedFile(filePath);
+  });
+
   test("POST /api/events/upload-image rejects unauthenticated request", async () => {
     const uploadRes = await request(app)
       .post("/api/events/upload-image")

@@ -1,6 +1,65 @@
 import { getLiveEventTiming } from './eventDateTime';
 
 const DEFAULT_CATEGORY = "General";
+const ABSOLUTE_URL_PATTERN = /^[a-z][a-z\d+\-.]*:/i;
+const LOCALHOST_HOST_PATTERN = /^(localhost|127\.0\.0\.1)$/i;
+
+const getApiOrigin = () => {
+  const configuredApiBase = import.meta.env.VITE_API_BASE_URL;
+  if (!configuredApiBase) {
+    return "";
+  }
+
+  try {
+    return new URL(configuredApiBase).origin;
+  } catch {
+    return "";
+  }
+};
+
+const resolveEventImage = (rawImageValue) => {
+  const imageValue = String(rawImageValue || "").trim();
+  if (!imageValue) {
+    return "";
+  }
+
+  if (ABSOLUTE_URL_PATTERN.test(imageValue)) {
+    try {
+      const parsedUrl = new URL(imageValue);
+      const apiOrigin = getApiOrigin();
+      const uploadsPath = parsedUrl.pathname || "";
+
+      if (
+        apiOrigin
+        && LOCALHOST_HOST_PATTERN.test(parsedUrl.hostname)
+        && uploadsPath.startsWith("/uploads/")
+      ) {
+        return `${apiOrigin}${uploadsPath}${parsedUrl.search || ""}`;
+      }
+    } catch {
+      return imageValue;
+    }
+
+    return imageValue;
+  }
+
+  if (imageValue.startsWith("//")) {
+    return imageValue;
+  }
+
+  if (imageValue.startsWith("/")) {
+    const apiOrigin = getApiOrigin();
+    return apiOrigin ? `${apiOrigin}${imageValue}` : imageValue;
+  }
+
+  if (imageValue.startsWith("uploads/")) {
+    const normalizedUploadPath = `/${imageValue}`;
+    const apiOrigin = getApiOrigin();
+    return apiOrigin ? `${apiOrigin}${normalizedUploadPath}` : normalizedUploadPath;
+  }
+
+  return imageValue;
+};
 
 const pad2 = (value) => String(value).padStart(2, "0");
 
@@ -104,6 +163,7 @@ export const mapApiEvent = (event = {}, { rsvpSet = new Set() } = {}) => {
   const date = formatDate(event.event_date);
   const time = event.time || "TBA";
   const eventDateRaw = event.event_date || null;
+  const resolvedImage = resolveEventImage(event.image_url || event.image);
   const timing = getLiveEventTiming({
     eventDate: eventDateRaw,
     time,
@@ -131,7 +191,7 @@ export const mapApiEvent = (event = {}, { rsvpSet = new Set() } = {}) => {
     submittedAt: event.submitted_at || null,
     reviewedAt: event.reviewed_at || null,
     rejectionReason: event.rejection_reason || null,
-    image: event.image_url || `https://picsum.photos/seed/${id || "event"}/2000/1200`,
+    image: resolvedImage || `https://picsum.photos/seed/${id || "event"}/2000/1200`,
     organizer: event.organizer || "Campus Organization",
     createdBy: createdBy ? String(createdBy) : null,
     rsvpStatus: rsvpSet.has(id) ? "rsvpd" : "available"
