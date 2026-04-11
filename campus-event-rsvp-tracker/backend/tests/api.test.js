@@ -324,11 +324,13 @@ describe("Backend API smoke tests", () => {
       sort: jest.fn().mockResolvedValue([
         {
           title: "Hackathon",
-          toObject: () => ({ title: "Hackathon" })
+          status: "Published",
+          toObject: () => ({ title: "Hackathon", status: "Published" })
         },
         {
           title: "Music Fest",
-          toObject: () => ({ title: "Music Fest" })
+          status: "Ongoing",
+          toObject: () => ({ title: "Music Fest", status: "Ongoing" })
         }
       ])
     });

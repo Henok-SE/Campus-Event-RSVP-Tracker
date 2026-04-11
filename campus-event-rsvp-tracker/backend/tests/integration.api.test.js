@@ -33,6 +33,12 @@ const removeUploadedFile = (filePath = "") => {
   }
 };
 
+const to24HourTime = (date) => {
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  return `${hours}:${minutes}`;
+};
+
 describe("Backend integration tests", () => {
   beforeAll(async () => {
     mongoServer = await MongoMemoryServer.create();
@@ -434,6 +440,83 @@ describe("Backend integration tests", () => {
 
     expect(uploadRes.status).toBe(400);
     expect(uploadRes.body.error.code).toBe("UPLOAD_ERROR");
+  });
+
+  test("create event persists duration_minutes", async () => {
+    const hashed = await bcrypt.hash("pass1234", 10);
+
+    const admin = await User.create({
+      name: "Duration Admin",
+      email: "duration-admin@example.com",
+      student_id: "3331/18",
+      password: hashed,
+      role: "Admin"
+    });
+
+    const token = jwt.sign({ id: admin._id, role: admin.role }, process.env.JWT_SECRET);
+
+    const createRes = await request(app)
+      .post("/api/events")
+      .set("Authorization", `Bearer ${token}`)
+      .send({
+        title: "Duration Persistence Event",
+        event_date: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+        time: "10:00",
+        duration_minutes: 95,
+        category: "Tech",
+        tags: ["Tech"]
+      });
+
+    expect(createRes.status).toBe(201);
+    expect(createRes.body.success).toBe(true);
+    expect(createRes.body.data.duration_minutes).toBe(95);
+
+    const saved = await Event.findById(createRes.body.data._id);
+    expect(saved.duration_minutes).toBe(95);
+  });
+
+  test("ended published events are auto-marked completed and removed from public feed", async () => {
+    const hashed = await bcrypt.hash("pass1234", 10);
+
+    const owner = await User.create({
+      name: "Lifecycle Owner",
+      email: "lifecycle-owner@example.com",
+      student_id: "3332/18",
+      password: hashed,
+      role: "Student"
+    });
+
+    const ownerToken = jwt.sign({ id: owner._id, role: owner.role }, process.env.JWT_SECRET);
+
+    const startedAt = new Date(Date.now() - 2 * 60 * 60 * 1000);
+    const event = await Event.create({
+      title: "Ended Event",
+      event_date: startedAt,
+      time: to24HourTime(startedAt),
+      duration_minutes: 30,
+      status: "Published",
+      created_by: owner._id,
+      attending_count: 0
+    });
+
+    const publicListRes = await request(app).get("/api/events");
+    expect(publicListRes.status).toBe(200);
+    expect(publicListRes.body.success).toBe(true);
+    expect(publicListRes.body.data.some((item) => String(item._id) === String(event._id))).toBe(false);
+
+    const refreshed = await Event.findById(event._id);
+    expect(refreshed.status).toBe("Completed");
+
+    const ownerListRes = await request(app)
+      .get("/api/events")
+      .set("Authorization", `Bearer ${ownerToken}`);
+
+    expect(ownerListRes.status).toBe(200);
+    expect(ownerListRes.body.success).toBe(true);
+
+    const ownerEvent = ownerListRes.body.data.find((item) => String(item._id) === String(event._id));
+    expect(ownerEvent).toBeDefined();
+    expect(ownerEvent.status).toBe("Completed");
   });
 
   test("POST /api/events/upload-image enforces size limits", async () => {

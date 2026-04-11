@@ -220,6 +220,7 @@ export default function EventDetails() {
   const eventTiming = getLiveEventTiming({
     eventDate: event.eventDateRaw,
     time: event.time,
+    durationMinutes: event.durationMinutes,
     status: event.status,
     nowMs: detailNowMs
   });

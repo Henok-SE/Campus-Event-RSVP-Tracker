@@ -3,6 +3,7 @@ const RSVP = require("../models/rsvp");
 const Event = require("../models/event");
 const Notification = require("../models/notification");
 const { sendSuccess, sendError } = require("../utils/apiResponse");
+const { reconcileLifecycleStatus } = require("../utils/eventLifecycle");
 
 const CLOSED_EVENT_STATUSES = ["Cancelled", "Completed"];
 const RSVP_OPEN_STATUSES = ["Published", "Ongoing"];
@@ -66,6 +67,11 @@ exports.createRsvp = async (req, res) => {
         code: "EVENT_NOT_FOUND",
         message: "Event not found"
       });
+    }
+
+    const lifecycle = reconcileLifecycleStatus({ event });
+    if (lifecycle.changed) {
+      await event.save();
     }
 
     if (isClosedStatus(event.status) || !RSVP_OPEN_STATUSES.includes(event.status)) {
@@ -242,6 +248,12 @@ exports.getMyRsvps = async (req, res) => {
       rsvps
         .filter((rsvp) => rsvp.event_id)
         .map(async (rsvp) => {
+          const event = rsvp.event_id;
+          const lifecycle = reconcileLifecycleStatus({ event });
+          if (lifecycle.changed) {
+            await event.save();
+          }
+
           const attending = await RSVP.countDocuments({ event_id: rsvp.event_id._id });
 
           return {
@@ -249,13 +261,13 @@ exports.getMyRsvps = async (req, res) => {
             status: rsvp.status,
             rsvp_date: rsvp.rsvp_date,
             event: {
-              ...rsvp.event_id.toObject(),
+              ...event.toObject(),
               attending,
               tags:
-                Array.isArray(rsvp.event_id.tags) && rsvp.event_id.tags.length > 0
-                  ? rsvp.event_id.tags
-                  : rsvp.event_id.category
-                    ? [rsvp.event_id.category]
+                Array.isArray(event.tags) && event.tags.length > 0
+                  ? event.tags
+                  : event.category
+                    ? [event.category]
                     : []
             }
           };

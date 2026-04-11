@@ -18,6 +18,8 @@ export default function CreateEvent() {
     location: '',
     event_date: '',
     time: '',
+    duration_hours: '1',
+    duration_minutes: '0',
     capacity: '',
     category: 'Academic',
     is_free: true,
@@ -91,12 +93,21 @@ export default function CreateEvent() {
         imageUrl = uploadResponse?.data?.data?.image_url;
       }
 
+      const durationHours = Number(formData.duration_hours || 0);
+      const durationMinutesPart = Number(formData.duration_minutes || 0);
+      const totalDurationMinutes = durationHours * 60 + durationMinutesPart;
+
+      if (!Number.isInteger(totalDurationMinutes) || totalDurationMinutes < 1 || totalDurationMinutes > 1440) {
+        throw new Error('Please provide a valid duration between 1 minute and 24 hours');
+      }
+
       const payload = {
         title: formData.title.trim(),
         description: formData.description.trim() || undefined,
         location: formData.location.trim() || undefined,
         event_date: formData.event_date ? new Date(formData.event_date).toISOString() : undefined,
         time: formData.time || undefined,
+        duration_minutes: totalDurationMinutes,
         capacity: formData.capacity ? Number(formData.capacity) : undefined,
         category: formData.category,
         status: isAdmin ? 'Published' : 'Pending',
@@ -120,6 +131,11 @@ export default function CreateEvent() {
         navigate('/dashboard');
       }
     } catch (error) {
+      if (!error?.response && error?.message) {
+        setErrorMessage(error.message);
+        return;
+      }
+
       const apiError = getApiError(error, 'Failed to create event');
       setErrorMessage(apiError.message);
     } finally {
@@ -261,6 +277,38 @@ export default function CreateEvent() {
                     required
                     className="w-full px-5 py-4 border border-slate-200 rounded-2xl focus:outline-none focus:border-blue-600"
                   />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Approximate Duration</label>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-medium text-slate-500 mb-1">Hours</label>
+                    <input
+                      type="number"
+                      name="duration_hours"
+                      value={formData.duration_hours}
+                      onChange={handleChange}
+                      min="0"
+                      max="24"
+                      required
+                      className="w-full px-5 py-4 border border-slate-200 rounded-2xl focus:outline-none focus:border-blue-600"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-500 mb-1">Minutes</label>
+                    <input
+                      type="number"
+                      name="duration_minutes"
+                      value={formData.duration_minutes}
+                      onChange={handleChange}
+                      min="0"
+                      max="59"
+                      required
+                      className="w-full px-5 py-4 border border-slate-200 rounded-2xl focus:outline-none focus:border-blue-600"
+                    />
+                  </div>
                 </div>
               </div>
 

@@ -72,12 +72,14 @@ export default function Dashboard() {
   const listNowMs = useNow(60_000);
 
   const featuredEvents = useMemo(() => {
-    if (events.length === 0) {
+    const activeEvents = events.filter((event) => event.status !== 'Completed');
+
+    if (activeEvents.length === 0) {
       return [];
     }
 
-    const withImages = events.filter((event) => Boolean(event.image));
-    const source = withImages.length > 0 ? withImages : events;
+    const withImages = activeEvents.filter((event) => Boolean(event.image));
+    const source = withImages.length > 0 ? withImages : activeEvents;
     return source.slice(0, 2);
   }, [events]);
 
@@ -255,6 +257,10 @@ export default function Dashboard() {
   const filteredEvents = useMemo(() => {
     const term = debouncedSearchTerm.toLowerCase().trim();
     return events.filter((event) => {
+      if (event.status === 'Completed') {
+        return false;
+      }
+
       const matchesSearch = !term || 
         (event.title || '').toLowerCase().includes(term) ||
         (event.desc || '').toLowerCase().includes(term) ||
@@ -287,6 +293,7 @@ export default function Dashboard() {
     ? getLiveEventTiming({
       eventDate: featured.eventDateRaw,
       time: featured.time,
+      durationMinutes: featured.durationMinutes,
       status: featured.status,
       nowMs: heroNowMs
     })
@@ -382,6 +389,7 @@ export default function Dashboard() {
                 const eventTiming = getLiveEventTiming({
                   eventDate: event.eventDateRaw,
                   time: event.time,
+                  durationMinutes: event.durationMinutes,
                   status: event.status,
                   nowMs: listNowMs
                 });
@@ -485,6 +493,7 @@ export default function Dashboard() {
                   const scheduleTiming = getLiveEventTiming({
                     eventDate: ev.eventDateRaw,
                     time: ev.time,
+                    durationMinutes: ev.durationMinutes,
                     status: ev.status,
                     nowMs: listNowMs
                   });

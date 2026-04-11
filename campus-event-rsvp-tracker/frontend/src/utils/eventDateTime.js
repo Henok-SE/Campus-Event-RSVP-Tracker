@@ -4,6 +4,7 @@ const DATE_PREFIX_RE = /^(\d{4})-(\d{2})-(\d{2})/;
 const TIME_24H_RE = /^([01]?\d|2[0-3]):([0-5]\d)(?::([0-5]\d))?$/;
 const TIME_12H_RE = /^(\d{1,2}):([0-5]\d)\s*([AaPp][Mm])$/;
 const TIME_12H_HOUR_ONLY_RE = /^(\d{1,2})\s*([AaPp][Mm])$/;
+const DEFAULT_EVENT_DURATION_MINUTES = 60;
 
 const getDateParts = (eventDate) => {
   if (!eventDate) {
@@ -86,11 +87,28 @@ const getTimeParts = (timeValue) => {
   return null;
 };
 
-const getPostStartLabel = (status) => {
+const normalizeDurationMinutes = (durationMinutes) => {
+  const parsed = Number(durationMinutes);
+  if (Number.isInteger(parsed) && parsed >= 1 && parsed <= 1440) {
+    return parsed;
+  }
+
+  return DEFAULT_EVENT_DURATION_MINUTES;
+};
+
+const getPostStartLabel = (status, { isEnded = false } = {}) => {
   const normalized = String(status || '').trim().toLowerCase();
+
+  if (isEnded) {
+    return 'Completed';
+  }
 
   if (normalized === 'completed') {
     return 'Completed';
+  }
+
+  if (normalized === 'cancelled') {
+    return 'Cancelled';
   }
 
   if (normalized === 'ongoing') {
@@ -158,7 +176,7 @@ export const getEventStartTimestamp = (eventDate, eventTime) => {
   return startTime;
 };
 
-export const getLiveEventTiming = ({ eventDate, time, status, nowMs = Date.now() }) => {
+export const getLiveEventTiming = ({ eventDate, time, status, durationMinutes, nowMs = Date.now() }) => {
   const startTimestamp = getEventStartTimestamp(eventDate, time);
 
   if (!startTimestamp) {
@@ -170,6 +188,19 @@ export const getLiveEventTiming = ({ eventDate, time, status, nowMs = Date.now()
   }
 
   const diff = startTimestamp - nowMs;
+  const normalizedDurationMinutes = normalizeDurationMinutes(durationMinutes);
+  const endTimestamp = startTimestamp + normalizedDurationMinutes * 60 * 1000;
+
+  if (nowMs >= endTimestamp) {
+    const label = getPostStartLabel(status, { isEnded: true });
+
+    return {
+      state: 'ended',
+      countdown: label,
+      startsIn: label
+    };
+  }
+
   if (diff <= 0) {
     const label = getPostStartLabel(status);
 

@@ -57,6 +57,10 @@ export default function Events() {
     const term = searchTerm.toLowerCase().trim();
 
     return events.filter((event) => {
+      if (event.status === 'Completed') {
+        return false;
+      }
+
       const matchesSearch = !term
         || event.title.toLowerCase().includes(term)
         || event.desc.toLowerCase().includes(term)

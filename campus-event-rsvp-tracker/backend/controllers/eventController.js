@@ -8,6 +8,11 @@ const { sendSuccess, sendError } = require("../utils/apiResponse");
 const { FIXED_INTEREST_CATEGORY_LOOKUP } = require("../config/interestOptions");
 const { getConfig } = require("../config/env");
 const { uploadBufferToCloudinary } = require("../utils/cloudinary");
+const {
+  DEFAULT_EVENT_DURATION_MINUTES,
+  normalizeDurationMinutes,
+  reconcileLifecycleStatus
+} = require("../utils/eventLifecycle");
 
 const PUBLIC_EVENT_STATUSES = ["Published", "Ongoing"];
 const REVIEWABLE_EVENT_STATUS = "Pending";
@@ -117,11 +122,13 @@ const serializeEvent = (eventDoc, attendingCount) => {
     : event.category
       ? [event.category]
       : [];
+  const durationMinutes = normalizeDurationMinutes(event.duration_minutes) || DEFAULT_EVENT_DURATION_MINUTES;
 
   return {
     ...event,
     category: event.category || tags[0] || null,
     tags,
+    duration_minutes: durationMinutes,
     attending: attendingCount
   };
 };
@@ -133,6 +140,7 @@ const applyEventFields = (event, payload = {}) => {
     location,
     event_date,
     time,
+    duration_minutes,
     capacity,
     category,
     image_url
@@ -169,6 +177,15 @@ const applyEventFields = (event, payload = {}) => {
 
   if (time !== undefined) {
     event.time = time;
+  }
+
+  if (duration_minutes !== undefined) {
+    const normalizedDuration = normalizeDurationMinutes(duration_minutes);
+    if (!normalizedDuration) {
+      return "duration_minutes must be an integer between 1 and 1440";
+    }
+
+    event.duration_minutes = normalizedDuration;
   }
 
   if (capacity !== undefined) {
@@ -304,7 +321,18 @@ exports.uploadEventImage = async (req, res) => {
 
 exports.createEvent = async (req, res) => {
   try {
-    const { title, description, location, event_date, time, capacity, category, image_url, status } = req.body;
+    const {
+      title,
+      description,
+      location,
+      event_date,
+      time,
+      duration_minutes,
+      capacity,
+      category,
+      image_url,
+      status
+    } = req.body;
 
     if (!title) {
       return sendError(res, {
@@ -335,6 +363,7 @@ exports.createEvent = async (req, res) => {
       capacity === undefined || capacity === null || capacity === ""
         ? undefined
         : Number(capacity);
+    const normalizedDuration = normalizeDurationMinutes(duration_minutes);
 
     if (normalizedCapacity !== undefined) {
       if (!Number.isInteger(normalizedCapacity) || normalizedCapacity < 1) {
@@ -346,6 +375,14 @@ exports.createEvent = async (req, res) => {
       }
     }
 
+    if (!normalizedDuration) {
+      return sendError(res, {
+        status: 400,
+        code: "VALIDATION_ERROR",
+        message: "duration_minutes must be an integer between 1 and 1440"
+      });
+    }
+
     const normalizedTags = normalizeTags(req.body.tags, category);
     const effectiveStatus = isAdmin(req.user) ? (status || "Published") : REVIEWABLE_EVENT_STATUS;
 
@@ -355,6 +392,7 @@ exports.createEvent = async (req, res) => {
       location,
       event_date: parsedDate,
       time,
+      duration_minutes: normalizedDuration,
       capacity: normalizedCapacity,
       category: category || normalizedTags[0] || undefined,
       tags: normalizedTags,
@@ -420,6 +458,15 @@ exports.getEvents = async (req, res) => {
     const events = await Event.find(query).sort({ event_date: 1, created_at: -1 });
     const eventsWithAttending = await Promise.all(
       events.map(async (event) => {
+        const lifecycle = reconcileLifecycleStatus({ event });
+        if (lifecycle.changed) {
+          await event.save();
+        }
+
+        if (!canReadEvent(event, req.user)) {
+          return null;
+        }
+
         const attending = Number.isInteger(event.attending_count)
           ? event.attending_count
           : await RSVP.countDocuments({ event_id: event._id });
@@ -428,10 +475,12 @@ exports.getEvents = async (req, res) => {
       })
     );
 
+    const visibleEvents = eventsWithAttending.filter(Boolean);
+
     return sendSuccess(res, {
       status: 200,
       message: "Events fetched",
-      data: eventsWithAttending
+      data: visibleEvents
     });
   } catch (err) {
     return sendError(res, {
@@ -454,6 +503,11 @@ exports.getEventById = async (req, res) => {
         code: "EVENT_NOT_FOUND",
         message: "Event not found"
       });
+    }
+
+    const lifecycle = reconcileLifecycleStatus({ event });
+    if (lifecycle.changed) {
+      await event.save();
     }
 
     if (!canReadEvent(event, req.user)) {
