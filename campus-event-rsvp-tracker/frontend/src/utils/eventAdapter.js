@@ -162,12 +162,17 @@ export const mapApiEvent = (event = {}, { rsvpSet = new Set() } = {}) => {
   const seatsLeft = capacity > 0 ? Math.max(0, capacity - attending) : null;
   const date = formatDate(event.event_date);
   const time = event.time || "TBA";
+  const parsedDurationMinutes = Number(event.duration_minutes ?? event.durationMinutes ?? event.duration);
+  const durationMinutes = Number.isInteger(parsedDurationMinutes) && parsedDurationMinutes > 0
+    ? parsedDurationMinutes
+    : 60;
   const eventDateRaw = event.event_date || null;
   const resolvedImage = resolveEventImage(event.image_url || event.image);
   const timing = getLiveEventTiming({
     eventDate: eventDateRaw,
     time,
-    status: event.status
+    status: event.status,
+    durationMinutes
   });
 
   return {
@@ -179,6 +184,7 @@ export const mapApiEvent = (event = {}, { rsvpSet = new Set() } = {}) => {
     date,
     eventDateRaw,
     time,
+    durationMinutes,
     attending,
     capacity,
     starts: timing.startsIn,

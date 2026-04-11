@@ -33,7 +33,7 @@ const validateObjectIdParam = (paramName) => (req, res, next) => {
 };
 
 const validateEventBody = ({ partial = false } = {}) => (req, res, next) => {
-  const { title, event_date, capacity, status, tags } = req.body || {};
+  const { title, event_date, capacity, status, tags, duration_minutes } = req.body || {};
   const allowedStatuses = ["Draft", "Pending", "Rejected", "Published", "Ongoing", "Completed", "Cancelled"];
 
   if (!partial && (title === undefined || String(title).trim() === "")) {
@@ -70,6 +70,17 @@ const validateEventBody = ({ partial = false } = {}) => (req, res, next) => {
         status: 400,
         code: "VALIDATION_ERROR",
         message: "capacity must be a positive integer"
+      });
+    }
+  }
+
+  if (duration_minutes !== undefined && duration_minutes !== null && duration_minutes !== "") {
+    const normalizedDuration = Number(duration_minutes);
+    if (!Number.isInteger(normalizedDuration) || normalizedDuration < 1 || normalizedDuration > 1440) {
+      return sendError(res, {
+        status: 400,
+        code: "VALIDATION_ERROR",
+        message: "duration_minutes must be an integer between 1 and 1440"
       });
     }
   }

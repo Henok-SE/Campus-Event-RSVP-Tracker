@@ -95,7 +95,7 @@ export default function MySchedule() {
           <div className="flex items-center justify-between mt-4">
             <h1 className="text-3xl font-bold">My Schedule</h1>
             <div className="text-sm text-slate-500">
-              {myEvents.length} upcoming event{myEvents.length !== 1 ? 's' : ''}
+              {myEvents.length} event{myEvents.length !== 1 ? 's' : ''} in your schedule
             </div>
           </div>
         </div>
@@ -111,10 +111,10 @@ export default function MySchedule() {
         {myEvents.length === 0 ? (
           <div className="bg-white rounded-3xl p-16 text-center border border-slate-200">
             <Calendar className="w-16 h-16 mx-auto text-slate-400 mb-6" />
-            <h2 className="text-2xl font-semibold mb-4 text-slate-800">No upcoming events</h2>
+            <h2 className="text-2xl font-semibold mb-4 text-slate-800">No events in your schedule</h2>
             <p className="text-slate-600 mb-8 max-w-md mx-auto">
               You haven't RSVP'd to any events yet.<br />
-              Browse events and join something exciting!
+              Browse events and join something exciting.
             </p>
             <Link
               to="/events"
@@ -159,8 +159,14 @@ export default function MySchedule() {
 
                   {/* Action */}
                   <div className="flex flex-col justify-between items-end">
-                    <span className="inline-flex px-5 py-2 rounded-full text-sm font-medium bg-green-100 text-green-800">
-                      Confirmed
+                    <span
+                      className={`inline-flex px-5 py-2 rounded-full text-sm font-medium ${
+                        ev.status === 'Completed'
+                          ? 'bg-slate-200 text-slate-700'
+                          : 'bg-green-100 text-green-800'
+                      }`}
+                    >
+                      {ev.status === 'Completed' ? 'Completed' : 'Confirmed'}
                     </span>
                     
                     <button

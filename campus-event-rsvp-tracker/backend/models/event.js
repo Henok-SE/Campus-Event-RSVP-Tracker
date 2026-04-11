@@ -18,6 +18,13 @@ type: String,
 trim: true
 },
 
+duration_minutes: {
+type: Number,
+default: 60,
+min: 1,
+max: 1440
+},
+
 capacity: {
 type: Number,
 min: 1
