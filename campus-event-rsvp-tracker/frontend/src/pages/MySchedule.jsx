@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Footer from '../components/common/Footer';
 import { Calendar, MapPin, Users, X } from 'lucide-react';
+import BackButton from '../components/ui/BackButton';
 import { cancelRsvp, getApiError, getMyRSVPs } from '../services/api';
 import { mapMyRsvpRecord } from '../utils/eventAdapter';
 
@@ -86,12 +87,7 @@ export default function MySchedule() {
       {/* Header */}
       <div className="bg-white border-b sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
-          <Link 
-            to="/dashboard" 
-            className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium"
-          >
-            ← Back to Dashboard
-          </Link>
+          <BackButton to="/dashboard" label="Back to Dashboard" />
           <div className="flex items-center justify-between mt-4">
             <h1 className="text-3xl font-bold">My Schedule</h1>
             <div className="text-sm text-slate-500">

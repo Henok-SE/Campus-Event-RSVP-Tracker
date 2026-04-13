@@ -2,6 +2,7 @@
 import { useAuth } from '../context/AuthContext';
 import { useState } from 'react';
 import { FIXED_INTEREST_CATEGORIES } from '../data/interestOptions';
+import BackButton from '../components/ui/BackButton';
 
 const parseCustomInterests = (value = '') => (
   [...new Set(
@@ -81,6 +82,7 @@ export default function ProfileSettings() {
   return (
     <div className="min-h-screen bg-slate-100 p-6">
       <div className="max-w-2xl mx-auto bg-white rounded-3xl shadow-xl p-10">
+        <BackButton to="/dashboard" label="Back to Dashboard" className="mb-6" />
         <h1 className="text-3xl font-semibold mb-8">Profile Settings</h1>
 
         {errorMessage ? (
@@ -103,7 +105,7 @@ export default function ProfileSettings() {
               name="name"
               value={formData.name}
               onChange={handleChange}
-              className="w-full px-5 py-4 border border-slate-300 rounded-2xl"
+              className="w-full px-5 py-4 border border-slate-300 rounded-2xl transition-colors focus:outline-none focus:border-blue-600"
             />
           </div>
 
@@ -125,7 +127,7 @@ export default function ProfileSettings() {
               name="email"
               value={formData.email}
               onChange={handleChange}
-              className="w-full px-5 py-4 border border-slate-300 rounded-2xl"
+              className="w-full px-5 py-4 border border-slate-300 rounded-2xl transition-colors focus:outline-none focus:border-blue-600"
             />
           </div>
 
@@ -140,8 +142,8 @@ export default function ProfileSettings() {
                     key={category}
                     className={`flex items-center gap-2 rounded-xl px-3 py-2 text-sm transition ${
                       isSelected
-                        ? 'bg-blue-50 text-blue-700 border border-blue-200'
-                        : 'bg-slate-50 text-slate-700 border border-transparent'
+                        ? 'bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100'
+                        : 'bg-slate-50 text-slate-700 border border-transparent hover:bg-slate-100'
                     }`}
                   >
                     <input
@@ -164,7 +166,7 @@ export default function ProfileSettings() {
               name="interest_keywords"
               value={formData.interest_keywords}
               onChange={handleChange}
-              className="w-full px-5 py-4 border border-slate-300 rounded-2xl"
+              className="w-full px-5 py-4 border border-slate-300 rounded-2xl transition-colors focus:outline-none focus:border-blue-600"
               placeholder="robotics, startups, volunteering"
             />
             <p className="mt-2 text-xs text-slate-500">Separate multiple custom interests with commas.</p>
@@ -173,7 +175,7 @@ export default function ProfileSettings() {
           <button 
             onClick={handleSave}
             disabled={loading}
-            className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white py-5 rounded-2xl font-semibold"
+            className="w-full bg-blue-600 hover:bg-blue-700 hover:-translate-y-0.5 disabled:bg-blue-400 text-white py-5 rounded-2xl font-semibold transition-all duration-200"
           >
             {loading ? 'Saving...' : 'Save Changes'}
           </button>

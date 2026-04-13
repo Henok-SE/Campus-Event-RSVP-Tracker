@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { LogOut, Calendar, Settings, HelpCircle, Bell, Menu, X, Trash2, ClipboardCheck, Sparkles, Plus } from 'lucide-react';
+import { LogOut, Calendar, Settings, HelpCircle, Bell, Trash2, ClipboardCheck, Sparkles, Plus } from 'lucide-react';
 import {
   getApiError,
   deleteNotification,
@@ -66,7 +66,6 @@ export default function DashboardNavbar({ rsvpCount }) {
   
   const [profileOpen, setProfileOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const navRef = useRef(null);
 
@@ -209,23 +208,14 @@ export default function DashboardNavbar({ rsvpCount }) {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
         {/* Logo */}
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-blue-600 rounded-2xl flex items-center justify-center text-white">
-            <Sparkles className="w-5 h-5" aria-hidden="true" />
-          </div>
-          <span className="text-xl sm:text-2xl font-semibold tracking-tight">CampusVibe</span>
+          <Sparkles className="w-8 h-8 text-blue-600" aria-hidden="true" />
+          <span className="hidden sm:inline text-xl sm:text-2xl font-semibold tracking-tight">CampusVibe</span>
         </div>
 
-        <div className="flex items-center gap-3 md:gap-7" ref={navRef}>
-          <div className="hidden md:block text-sm font-medium text-slate-700">{rsvpCount} RSVP'd</div>
-
-          <Link
-            to="/create-event"
-            aria-label="Create event"
-            title="Create event"
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-blue-600 text-white transition-all duration-200 hover:bg-blue-700 hover:shadow-md hover:-translate-y-0.5"
-          >
-            <Plus className="h-5 w-5" aria-hidden="true" />
-          </Link>
+        <div className="flex items-center gap-3 sm:gap-4 md:gap-7" ref={navRef}>
+          <div className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-700 sm:text-sm">
+            {rsvpCount} RSVP'd
+          </div>
 
           {/* Notifications Bell */}
           <div className="relative">
@@ -239,9 +229,9 @@ export default function DashboardNavbar({ rsvpCount }) {
                 }
               }}
               aria-label="Notifications"
-              className="relative p-2 rounded-full text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-all duration-200"
+              className="relative inline-flex h-9 w-9 items-center justify-center rounded-full bg-blue-600 text-white transition-all duration-200 hover:bg-blue-700 hover:shadow-md hover:-translate-y-0.5"
             >
-              <Bell className="w-6 h-6" />
+              <Bell className="h-5 w-5" />
               {unreadCount > 0 && (
                 <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold min-w-5 h-5 px-1 flex items-center justify-center rounded-full shadow-sm">
                   {unreadCount}
@@ -305,6 +295,15 @@ export default function DashboardNavbar({ rsvpCount }) {
             )}
           </div>
 
+          <Link
+            to="/create-event"
+            aria-label="Create event"
+            title="Create event"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-blue-600 text-white transition-all duration-200 hover:bg-blue-700 hover:shadow-md hover:-translate-y-0.5"
+          >
+            <Plus className="h-5 w-5" aria-hidden="true" />
+          </Link>
+
           {/* Profile Dropdown */}
           <div className="relative">
             <button
@@ -363,28 +362,8 @@ export default function DashboardNavbar({ rsvpCount }) {
               </div>
             )}
           </div>
-
-          {/* Mobile Overlay Menu Toggle */}
-          <button 
-            type="button"
-            className="md:hidden p-2 rounded-full text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-all duration-200"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            aria-label="Toggle mobile menu"
-          >
-            {mobileMenuOpen ? <X className="w-7 h-7" /> : <Menu className="w-7 h-7" />}
-          </button>
         </div>
       </div>
-
-      {/* Mobile Menu Dropdown contents */}
-      {mobileMenuOpen && (
-        <div className="md:hidden absolute top-full left-0 w-full bg-white/95 backdrop-blur border-b border-slate-200 shadow-lg px-6 py-5 flex flex-col gap-4 z-10 animate-in slide-in-from-top-2">
-          {user?.role === 'Admin' ? (
-            <Link to="/admin/review" onClick={() => setMobileMenuOpen(false)} className="text-base font-medium hover:text-blue-600 transition-colors">Admin Review</Link>
-          ) : null}
-          <div className="text-base font-medium text-slate-500">You have {rsvpCount} active RSVPs</div>
-        </div>
-      )}
     </nav>
   );
 }
