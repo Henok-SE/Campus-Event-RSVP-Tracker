@@ -4,6 +4,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { MapPin, Users, Clock } from 'lucide-react';
 import Footer from '../components/common/Footer';
+import BackButton from '../components/ui/BackButton';
 import { cancelRsvp, deleteEvent, getApiError, getEventById, getMyRSVPs, resubmitEventForReview, rsvpEvent } from '../services/api';
 import { useNow } from '../hooks/useNow';
 import { mapApiEvent } from '../utils/eventAdapter';
@@ -229,12 +230,7 @@ export default function EventDetails() {
     <div className="bg-gray-50 min-h-screen">
       {/* Back Navigation */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
-        <Link 
-          to="/dashboard" 
-          className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium"
-        >
-          ← Back to Dashboard
-        </Link>
+        <BackButton to="/dashboard" label="Back to Dashboard" />
       </div>
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 pb-20">

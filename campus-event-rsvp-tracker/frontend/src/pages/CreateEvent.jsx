@@ -1,9 +1,10 @@
 // src/pages/CreateEvent.jsx
 import { useState, useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import Footer from '../components/common/Footer';
 import { X, Image as ImageIcon } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import BackButton from '../components/ui/BackButton';
 import { createEvent, getApiError, uploadEventImage } from '../services/api';
 
 export default function CreateEvent() {
@@ -148,9 +149,7 @@ export default function CreateEvent() {
       {/* Header */}
       <div className="bg-white border-b">
         <div className="max-w-4xl mx-auto px-6 py-6">
-          <Link to="/dashboard" className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium">
-            ← Back to Dashboard
-          </Link>
+          <BackButton to="/dashboard" label="Back to Dashboard" />
           <h1 className="text-3xl font-bold mt-4">Host an Event</h1>
           <p className="text-slate-600 mt-1">Create a new campus event and upload a beautiful poster</p>
         </div>

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import DashboardNavbar from '../components/common/DashboardNavbar';
 import Footer from '../components/common/Footer';
 import { useAuth } from '../context/AuthContext';
+import BackButton from '../components/ui/BackButton';
 import { getApiError, getPendingReviewEvents, reviewEventSubmission } from '../services/api';
 import { mapApiEvent } from '../utils/eventAdapter';
 
@@ -128,6 +129,8 @@ export default function AdminEventReview() {
 
       <main className="bg-slate-50 min-h-screen">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-10">
+          <BackButton to="/dashboard" label="Back to Dashboard" className="mb-5" />
+
           <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-8">
             <div>
               <p className="text-sm text-slate-500">Signed in as {user?.name || 'Admin'}</p>
@@ -159,7 +162,7 @@ export default function AdminEventReview() {
                 const isProcessing = processingEventId === event.id;
 
                 return (
-                  <article key={event.id} className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8">
+                  <article key={event.id} className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 transition-shadow duration-200 hover:shadow-md">
                     <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
                       <div className="min-w-0">
                         <div className="flex flex-wrap gap-2 mb-4">
@@ -200,7 +203,7 @@ export default function AdminEventReview() {
                             type="button"
                             onClick={() => handleApprove(event.id)}
                             disabled={isProcessing}
-                            className="flex-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400 text-white px-4 py-2.5 font-medium"
+                            className="flex-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 hover:-translate-y-0.5 disabled:bg-emerald-400 text-white px-4 py-2.5 font-medium transition-all duration-200"
                           >
                             {isProcessing ? 'Processing...' : 'Approve & Publish'}
                           </button>
@@ -209,7 +212,7 @@ export default function AdminEventReview() {
                             type="button"
                             onClick={() => handleReject(event.id)}
                             disabled={isProcessing}
-                            className="flex-1 rounded-xl bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white px-4 py-2.5 font-medium"
+                            className="flex-1 rounded-xl bg-red-600 hover:bg-red-700 hover:-translate-y-0.5 disabled:bg-red-400 text-white px-4 py-2.5 font-medium transition-all duration-200"
                           >
                             {isProcessing ? 'Processing...' : 'Reject'}
                           </button>
