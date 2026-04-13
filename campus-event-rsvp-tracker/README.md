@@ -155,8 +155,12 @@ Default URLs:
 1. Frontend: `http://localhost:5173`
 2. Backend health: `http://localhost:5050/api/health`
 
-## Production Deployment (Render + Vercel/Netlify)
+## Production Deployment (Render + Vercel)
 Use this release order to avoid broken API links during first deploy.
+
+Repository deploy config files:
+1. `render.yaml` (backend service baseline for Render)
+2. `frontend/vercel.json` (SPA routing fallback for Vercel)
 
 ### 1) Deploy backend to Render first
 Build and start settings:
@@ -180,7 +184,7 @@ Backend validation checklist:
 2. Event image upload endpoint returns `provider: cloudinary`
 3. CORS accepts only configured frontend origins
 
-### 2) Deploy frontend to Vercel or Netlify
+### 2) Deploy frontend to Vercel
 Build settings:
 1. Root directory: `frontend`
 2. Build command: `npm run build`
@@ -208,6 +212,13 @@ What it runs:
 4. Frontend lint
 5. Frontend production build
 
+### 4) Post-deploy smoke checks (mandatory)
+1. `GET https://<backend>/api/health` returns 200
+2. Login works from deployed frontend
+3. Create event + image upload succeeds and image renders
+4. Admin route `/admin` is accessible for admin accounts only
+5. Student route access remains unchanged
+
 ## Database Initialization and Seed Data
 The backend includes an idempotent seed script.
 
@@ -221,6 +232,10 @@ What it does:
 1. Connects to MongoDB
 2. Syncs indexes
 3. Upserts sample student roster records, users, events, RSVPs, and attendance records
+
+Production safety note:
+1. The seed script now refuses to run with `NODE_ENV=production` unless `ALLOW_PROD_SEED=true` is explicitly set.
+2. Recommended production path is roster import + controlled admin provisioning, not full sample-data seeding.
 
 ## Student Roster Intake (PDF)
 The Student collection is the trusted roster source for registration.

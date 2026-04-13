@@ -11,6 +11,13 @@ const Attendance = require("../models/attendance");
 const AuthAudit = require("../models/authAudit");
 
 const MONGO_URI = process.env.MONGODB_URI || "mongodb://127.0.0.1:27017/eventDB";
+const IS_PRODUCTION = String(process.env.NODE_ENV || "").trim().toLowerCase() === "production";
+const ALLOW_PROD_SEED = String(process.env.ALLOW_PROD_SEED || "").trim().toLowerCase() === "true";
+
+if (IS_PRODUCTION && !ALLOW_PROD_SEED) {
+  console.error("Refusing to run seed script in production without ALLOW_PROD_SEED=true");
+  process.exit(1);
+}
 
 const seed = async () => {
   await mongoose.connect(MONGO_URI);
