@@ -20,9 +20,25 @@ let serverInstance = null;
 
 const allowedOrigins = config.frontendOrigins;
 
+// Render/Vercel requests pass through a reverse proxy; trust first hop for accurate client IP.
+app.set("trust proxy", 1);
+
+const isAllowedOrigin = (origin) => {
+  if (!origin) {
+    return true;
+  }
+
+  if (allowedOrigins.includes(origin)) {
+    return true;
+  }
+
+  // Allow Vercel preview deployments while still enforcing credentials + CORS checks.
+  return origin.endsWith(".vercel.app");
+};
+
 app.use(cors({
   origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) {
+    if (isAllowedOrigin(origin)) {
       return callback(null, true);
     }
 
@@ -36,10 +52,12 @@ app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 100
+  max: 100,
+  standardHeaders: true,
+  legacyHeaders: false
 });
 
-app.use(limiter);
+app.use("/api", limiter);
 
 app.get("/", (req, res) => {
   return sendSuccess(res, {
