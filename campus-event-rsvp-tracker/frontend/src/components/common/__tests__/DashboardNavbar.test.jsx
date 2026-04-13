@@ -1,21 +1,11 @@
-import { act } from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import DashboardNavbar from '../DashboardNavbar';
 
-const {
-  mockLogout,
-  mockDeleteNotification,
-  mockGetNotifications,
-  mockMarkAllNotificationsRead,
-  mockMarkNotificationRead
-} = vi.hoisted(() => ({
+const mocks = vi.hoisted(() => ({
   mockLogout: vi.fn(),
-  mockDeleteNotification: vi.fn(),
-  mockGetNotifications: vi.fn(),
-  mockMarkAllNotificationsRead: vi.fn(),
-  mockMarkNotificationRead: vi.fn()
+  mockUnreadCount: 0
 }));
 
 vi.mock('../../../context/AuthContext', () => ({
@@ -25,7 +15,7 @@ vi.mock('../../../context/AuthContext', () => ({
       student_id: '1234/18',
       role: 'student'
     },
-    logout: mockLogout
+    logout: mocks.mockLogout
   })
 }));
 
@@ -33,17 +23,26 @@ vi.mock('../../../services/api', () => ({
   getApiError: vi.fn((error, fallbackMessage = 'Request failed') => ({
     code: error?.response?.data?.error?.code || 'REQUEST_FAILED',
     message: error?.response?.data?.error?.message || fallbackMessage
-  })),
-  deleteNotification: mockDeleteNotification,
-  getNotifications: mockGetNotifications,
-  markAllNotificationsRead: mockMarkAllNotificationsRead,
-  markNotificationRead: mockMarkNotificationRead
+  }))
 }));
+
+vi.mock('../../../hooks/useNotifications', () => ({
+  useNotifications: vi.fn(() => ({
+    unreadCount: mocks.mockUnreadCount
+  }))
+}));
+
+function LocationProbe() {
+  const location = useLocation();
+  return <span data-testid="location-path">{location.pathname}</span>;
+}
 
 function renderNavbar() {
   return render(
-    <MemoryRouter>
-      <DashboardNavbar rsvpCount={3} />
+    <MemoryRouter initialEntries={['/dashboard']}>
+      <Routes>
+        <Route path="*" element={<><DashboardNavbar rsvpCount={3} /><LocationProbe /></>} />
+      </Routes>
     </MemoryRouter>
   );
 }
@@ -51,65 +50,28 @@ function renderNavbar() {
 describe('DashboardNavbar notifications', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-
-    Object.defineProperty(document, 'hidden', {
-      configurable: true,
-      get: () => false
-    });
+    mocks.mockUnreadCount = 0;
   });
 
   afterEach(() => {
     vi.useRealTimers();
   });
 
-  it('refreshes notifications on polling interval', async () => {
-    vi.useFakeTimers();
-    mockGetNotifications.mockResolvedValue({ data: { data: [] } });
-
+  it('navigates to dedicated notifications page on bell click', async () => {
     renderNavbar();
-
-    await act(async () => {
-      await Promise.resolve();
-    });
-    expect(mockGetNotifications).toHaveBeenCalledTimes(1);
-
-    await act(async () => {
-      vi.advanceTimersByTime(45_000);
-      await Promise.resolve();
-    });
-
-    expect(mockGetNotifications).toHaveBeenCalledTimes(2);
-  });
-
-  it('marks all notifications as read from the dropdown action', async () => {
-    mockGetNotifications.mockResolvedValue({
-      data: {
-        data: [
-          {
-            id: 'notif-1',
-            type: 'success',
-            title: 'RSVP confirmed',
-            message: 'You are in.',
-            read: false,
-            created_at: new Date().toISOString(),
-            event_id: 'event-1'
-          }
-        ]
-      }
-    });
-    mockMarkAllNotificationsRead.mockResolvedValue({ data: { success: true } });
-
-    renderNavbar();
-
-    await waitFor(() => {
-      expect(mockGetNotifications).toHaveBeenCalled();
-    });
 
     fireEvent.click(screen.getByRole('button', { name: /notifications/i }));
-    fireEvent.click(await screen.findByRole('button', { name: /mark all read/i }));
 
     await waitFor(() => {
-      expect(mockMarkAllNotificationsRead).toHaveBeenCalledTimes(1);
+      expect(screen.getByTestId('location-path')).toHaveTextContent('/notifications');
     });
+  });
+
+  it('shows unread badge count from notifications hook', async () => {
+    mocks.mockUnreadCount = 4;
+
+    renderNavbar();
+
+    expect(screen.getByText('4')).toBeInTheDocument();
   });
 });

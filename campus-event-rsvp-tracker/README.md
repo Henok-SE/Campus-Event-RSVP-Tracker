@@ -155,8 +155,12 @@ Default URLs:
 1. Frontend: `http://localhost:5173`
 2. Backend health: `http://localhost:5050/api/health`
 
-## Production Deployment (Render + Vercel/Netlify)
+## Production Deployment (Render + Vercel)
 Use this release order to avoid broken API links during first deploy.
+
+Repository deploy config files:
+1. `render.yaml` (backend service baseline for Render)
+2. `frontend/vercel.json` (SPA routing fallback for Vercel)
 
 ### 1) Deploy backend to Render first
 Build and start settings:
@@ -180,7 +184,7 @@ Backend validation checklist:
 2. Event image upload endpoint returns `provider: cloudinary`
 3. CORS accepts only configured frontend origins
 
-### 2) Deploy frontend to Vercel or Netlify
+### 2) Deploy frontend to Vercel
 Build settings:
 1. Root directory: `frontend`
 2. Build command: `npm run build`
@@ -208,6 +212,13 @@ What it runs:
 4. Frontend lint
 5. Frontend production build
 
+### 4) Post-deploy smoke checks (mandatory)
+1. `GET https://<backend>/api/health` returns 200
+2. Login works from deployed frontend
+3. Create event + image upload succeeds and image renders
+4. Admin route `/admin` is accessible for admin accounts only
+5. Student route access remains unchanged
+
 ## Database Initialization and Seed Data
 The backend includes an idempotent seed script.
 
@@ -221,6 +232,10 @@ What it does:
 1. Connects to MongoDB
 2. Syncs indexes
 3. Upserts sample student roster records, users, events, RSVPs, and attendance records
+
+Production safety note:
+1. The seed script now refuses to run with `NODE_ENV=production` unless `ALLOW_PROD_SEED=true` is explicitly set.
+2. Recommended production path is roster import + controlled admin provisioning, not full sample-data seeding.
 
 ## Student Roster Intake (PDF)
 The Student collection is the trusted roster source for registration.
@@ -293,9 +308,10 @@ Interest notification behavior:
 4. Email delivery is not enabled yet in this phase (in-app notifications only).
 
 Admin authorization policy:
-1. Admins are manually authorized via seeded admin accounts in `backend/scripts/seed.js`.
-2. To authorize a new admin, update admin entries in seed data and rerun `npm --prefix backend run db:seed`.
-3. Role changes take effect after the user signs in again (new JWT role claim).
+1. Initial admins are available via local/dev seed data in `backend/scripts/seed.js`.
+2. To authorize a new admin safely, promote an existing account with `npm --prefix backend run user:promote-admin -- --student-id 1234/18 --yes`.
+3. You can also promote by email: `npm --prefix backend run user:promote-admin -- --email user@campus.edu --yes`.
+4. Role changes take effect after the user signs in again (new JWT role claim).
 
 Event moderation workflow:
 1. Students can create events, but submissions default to `Pending` review.
@@ -333,6 +349,7 @@ Backend scripts:
 9. `npm --prefix backend run db:import:students:replace`
 10. `npm --prefix backend run db:import:students:finalized:replace`
 11. `npm --prefix backend run db:import:students:finalized:dry-run`
+12. `npm --prefix backend run user:promote-admin -- --student-id 1234/18 --yes`
 
 ## Current API Surface (Backend)
 Base URL: `/api`

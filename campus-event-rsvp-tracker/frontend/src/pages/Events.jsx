@@ -75,7 +75,7 @@ export default function Events() {
   return (
     <div className="bg-white min-h-screen">
       {/* Search & Filters */}
-      <div className="sticky top-0 bg-white border-b z-40 py-6">
+      <div className="sticky top-0 bg-white z-40 py-6">
         <div className="max-w-7xl mx-auto px-6">
           <div className="flex flex-col md:flex-row gap-6 items-center">
             <div className="flex-1 relative">

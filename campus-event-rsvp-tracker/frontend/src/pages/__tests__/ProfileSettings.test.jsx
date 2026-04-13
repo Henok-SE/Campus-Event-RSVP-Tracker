@@ -62,4 +62,35 @@ describe('ProfileSettings', () => {
       expect(screen.getByText(/unable to update profile/i)).toBeInTheDocument();
     });
   });
+
+  it('does not require interest fields for admins', async () => {
+    mockUpdateProfile.mockResolvedValue({
+      name: 'Admin User',
+      email: 'admin@campusvibe.edu'
+    });
+
+    useAuth.mockReturnValue({
+      user: {
+        name: 'Admin User',
+        student_id: '9999/99',
+        email: 'admin@campusvibe.edu',
+        role: 'Admin',
+        interest_categories: [],
+        interest_keywords: []
+      },
+      updateProfile: mockUpdateProfile
+    });
+
+    render(<ProfileSettings />);
+    fireEvent.click(screen.getByRole('button', { name: /save changes/i }));
+
+    await waitFor(() => {
+      expect(mockUpdateProfile).toHaveBeenCalledWith({
+        name: 'Admin User',
+        email: 'admin@campusvibe.edu'
+      });
+    });
+
+    expect(screen.getByText(/optional for admin accounts/i)).toBeInTheDocument();
+  });
 });

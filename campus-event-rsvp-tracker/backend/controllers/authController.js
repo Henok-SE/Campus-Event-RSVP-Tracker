@@ -574,7 +574,7 @@ exports.updateMe = async (req, res) => {
         });
       }
 
-      const currentUser = await User.findById(req.user.id).select("_id interest_categories interest_keywords");
+      const currentUser = await User.findById(req.user.id).select("_id role interest_categories interest_keywords");
       if (!currentUser) {
         return sendError(res, {
           status: 404,
@@ -591,7 +591,8 @@ exports.updateMe = async (req, res) => {
         ? normalizedInterestsResult.data.interest_keywords
         : (currentUser.interest_keywords || []);
 
-      if (resolvedInterestCategories.length + resolvedInterestKeywords.length === 0) {
+      const requiresInterests = String(currentUser.role || "") !== "Admin";
+      if (requiresInterests && resolvedInterestCategories.length + resolvedInterestKeywords.length === 0) {
         return sendError(res, {
           status: 400,
           code: "VALIDATION_ERROR",
