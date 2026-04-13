@@ -308,9 +308,10 @@ Interest notification behavior:
 4. Email delivery is not enabled yet in this phase (in-app notifications only).
 
 Admin authorization policy:
-1. Admins are manually authorized via seeded admin accounts in `backend/scripts/seed.js`.
-2. To authorize a new admin, update admin entries in seed data and rerun `npm --prefix backend run db:seed`.
-3. Role changes take effect after the user signs in again (new JWT role claim).
+1. Initial admins are available via local/dev seed data in `backend/scripts/seed.js`.
+2. To authorize a new admin safely, promote an existing account with `npm --prefix backend run user:promote-admin -- --student-id 1234/18 --yes`.
+3. You can also promote by email: `npm --prefix backend run user:promote-admin -- --email user@campus.edu --yes`.
+4. Role changes take effect after the user signs in again (new JWT role claim).
 
 Event moderation workflow:
 1. Students can create events, but submissions default to `Pending` review.
@@ -348,6 +349,7 @@ Backend scripts:
 9. `npm --prefix backend run db:import:students:replace`
 10. `npm --prefix backend run db:import:students:finalized:replace`
 11. `npm --prefix backend run db:import:students:finalized:dry-run`
+12. `npm --prefix backend run user:promote-admin -- --student-id 1234/18 --yes`
 
 ## Current API Surface (Backend)
 Base URL: `/api`
