@@ -1,6 +1,13 @@
 import axios from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5050/api';
+const normalizeApiBaseUrl = (rawBaseUrl) => {
+  const fallbackBaseUrl = 'http://localhost:5050/api';
+  const resolvedBaseUrl = (rawBaseUrl || fallbackBaseUrl).trim().replace(/\/+$/, '');
+
+  return resolvedBaseUrl.endsWith('/api') ? resolvedBaseUrl : `${resolvedBaseUrl}/api`;
+};
+
+const API_BASE_URL = normalizeApiBaseUrl(import.meta.env.VITE_API_BASE_URL);
 const SKIP_AUTH_HANDLER_KEY = 'skipGlobalUnauthorizedHandler';
 
 let unauthorizedHandler = null;
