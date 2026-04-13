@@ -16,6 +16,7 @@ const notificationRoutes = require("./routes/notificationRoutes");
 
 const app = express();
 const config = getConfig();
+let serverInstance = null;
 
 const allowedOrigins = config.frontendOrigins;
 
@@ -127,12 +128,52 @@ const connectDB = async () => {
 
 const PORT = config.port;
 
-if (require.main === module) {
-  connectDB().then(() => {
-    app.listen(PORT, () => {
-      console.log(`Server running on port ${PORT}`);
-    });
+const startServer = async () => {
+  await connectDB();
+
+  serverInstance = app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT} (image storage: ${config.imageStorage})`);
   });
+};
+
+const shutdown = (signal) => {
+  console.log(`${signal} received. Starting graceful shutdown...`);
+
+  const forceExitTimer = setTimeout(() => {
+    console.error("Forced shutdown after timeout");
+    process.exit(1);
+  }, 10000);
+
+  forceExitTimer.unref();
+
+  const closeDatabase = async () => {
+    try {
+      if (mongoose.connection.readyState !== 0) {
+        await mongoose.connection.close(false);
+      }
+      console.log("MongoDB connection closed");
+      process.exit(0);
+    } catch (error) {
+      console.error(`Shutdown error: ${error.message}`);
+      process.exit(1);
+    }
+  };
+
+  if (serverInstance) {
+    serverInstance.close(() => {
+      closeDatabase();
+    });
+    return;
+  }
+
+  closeDatabase();
+};
+
+if (require.main === module) {
+  startServer();
+
+  process.on("SIGTERM", () => shutdown("SIGTERM"));
+  process.on("SIGINT", () => shutdown("SIGINT"));
 }
 
 module.exports = { app, connectDB };
