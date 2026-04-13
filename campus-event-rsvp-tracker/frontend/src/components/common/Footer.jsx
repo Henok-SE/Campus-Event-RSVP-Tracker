@@ -37,7 +37,6 @@ export default function Footer() {
           <div className="space-y-3 text-sm">
             <p>Peak Craft Informatics Community</p>
             <p>campusvibe@pcic.edu</p>
-            <p>Student Center, Room 204</p>
           </div>
         </div>
       </div>

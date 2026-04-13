@@ -3,10 +3,18 @@
   "private": true,
   "version": "0.1.0",
   "scripts": {
+    "install": "npm run install:all",
     "dev:frontend": "npm --prefix frontend run dev",
     "dev:backend": "npm --prefix backend run dev",
+    "start:backend": "npm --prefix backend run start",
     "build:frontend": "npm --prefix frontend run build",
+    "build": "npm run build:frontend",
     "lint:frontend": "npm --prefix frontend run lint",
+    "test:frontend": "npm --prefix frontend run test:run",
+    "test:backend": "npm --prefix backend run test",
+    "test": "npm run test:backend && npm run test:frontend",
+    "check:env": "npm --prefix backend run check:env",
+    "verify:release": "npm run check:env && npm run test && npm run lint:frontend && npm run build",
     "install:all": "npm --prefix frontend install && npm --prefix backend install"
   }
 }

@@ -20,7 +20,7 @@ const parseCustomInterests = (value = '') => (
 );
 
 export default function Login() {
-  const { isAuthLoading, isLoggedIn, login, register } = useAuth();
+  const { isAuthLoading, isLoggedIn, authNotice, clearAuthNotice, login, register } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [mode, setMode] = useState('login');
@@ -49,6 +49,16 @@ export default function Login() {
       navigate(redirectTarget, { replace: true });
     }
   }, [isAuthLoading, isLoggedIn, navigate, redirectTarget]);
+
+  useEffect(() => {
+    if (!authNotice?.message) {
+      return;
+    }
+
+    setErrorMessage(authNotice.message);
+    setSuccessMessage('');
+    clearAuthNotice();
+  }, [authNotice, clearAuthNotice]);
 
   const handleChange = (e) => {
     setErrorMessage('');

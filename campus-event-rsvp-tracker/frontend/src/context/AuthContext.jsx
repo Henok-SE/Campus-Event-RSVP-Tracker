@@ -14,6 +14,7 @@ import {
 const AuthContext = createContext();
 const AUTH_USER_STORAGE_KEY = 'campusvibe_user';
 const AUTH_TOKEN_STORAGE_KEY = 'campusvibe_token';
+const AUTH_NOTICE_STORAGE_KEY = 'campusvibe_auth_notice';
 
 const withInterestDefaults = (candidate) => {
   if (!candidate || typeof candidate !== 'object') {
@@ -41,17 +42,55 @@ const safeParseUser = () => {
   }
 };
 
+const safeParseAuthNotice = () => {
+  const savedNotice = localStorage.getItem(AUTH_NOTICE_STORAGE_KEY);
+  if (!savedNotice) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(savedNotice);
+    if (!parsed || typeof parsed.message !== 'string') {
+      localStorage.removeItem(AUTH_NOTICE_STORAGE_KEY);
+      return null;
+    }
+
+    return {
+      code: parsed.code || 'AUTH_NOTICE',
+      message: parsed.message
+    };
+  } catch {
+    localStorage.removeItem(AUTH_NOTICE_STORAGE_KEY);
+    return null;
+  }
+};
+
 export function AuthProvider({ children }) {
   const [token, setToken] = useState(() => localStorage.getItem(AUTH_TOKEN_STORAGE_KEY));
   const [user, setUser] = useState(() => safeParseUser());
+  const [authNotice, setAuthNotice] = useState(() => safeParseAuthNotice());
   const [isAuthLoading, setIsAuthLoading] = useState(true);
 
   const isLoggedIn = Boolean(token && user);
 
-  const resetAuthState = useCallback(() => {
+  const resetAuthState = useCallback((notice = null) => {
     clearAuthToken();
     localStorage.removeItem(AUTH_TOKEN_STORAGE_KEY);
     localStorage.removeItem(AUTH_USER_STORAGE_KEY);
+
+    if (notice && typeof notice.message === 'string' && notice.message.trim()) {
+      const normalizedNotice = {
+        code: notice.code || 'AUTH_NOTICE',
+        message: notice.message.trim()
+      };
+
+      localStorage.setItem(AUTH_NOTICE_STORAGE_KEY, JSON.stringify(normalizedNotice));
+      setAuthNotice(normalizedNotice);
+    } else {
+      localStorage.removeItem(AUTH_NOTICE_STORAGE_KEY);
+      setAuthNotice(null);
+    }
+
     setToken(null);
     setUser(null);
   }, []);
@@ -61,8 +100,14 @@ export function AuthProvider({ children }) {
   }, [resetAuthState]);
 
   useEffect(() => {
-    const unsubscribe = registerUnauthorizedHandler(() => {
-      resetAuthState();
+    const unsubscribe = registerUnauthorizedHandler((error) => {
+      const status = error?.response?.status;
+      const reason = status === 401 ? 'Your session expired. Please sign in again.' : 'You have been signed out. Please sign in again.';
+
+      resetAuthState({
+        code: 'SESSION_EXPIRED',
+        message: reason
+      });
     });
 
     return () => {
@@ -132,9 +177,11 @@ export function AuthProvider({ children }) {
       setAuthToken(authToken);
       localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, authToken);
       localStorage.setItem(AUTH_USER_STORAGE_KEY, JSON.stringify(loggedInUser));
+      localStorage.removeItem(AUTH_NOTICE_STORAGE_KEY);
 
       setToken(authToken);
       setUser(loggedInUser);
+      setAuthNotice(null);
 
       return loggedInUser;
     } catch (error) {
@@ -182,8 +229,26 @@ export function AuthProvider({ children }) {
     }
   };
 
+  const clearAuthNotice = useCallback(() => {
+    localStorage.removeItem(AUTH_NOTICE_STORAGE_KEY);
+    setAuthNotice(null);
+  }, []);
+
   return (
-    <AuthContext.Provider value={{ isLoggedIn, isAuthLoading, token, user, login, register, logout, updateProfile }}>
+    <AuthContext.Provider
+      value={{
+        isLoggedIn,
+        isAuthLoading,
+        token,
+        user,
+        authNotice,
+        clearAuthNotice,
+        login,
+        register,
+        logout,
+        updateProfile
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

@@ -113,11 +113,17 @@ PORT=5050
 MONGODB_URI=mongodb://127.0.0.1:27017/eventDB
 JWT_SECRET=dev-jwt-secret-change-me
 FRONTEND_ORIGINS=http://localhost:5173
+IMAGE_STORAGE=local
+CLOUDINARY_CLOUD_NAME=your-cloud-name
+CLOUDINARY_API_KEY=your-api-key
+CLOUDINARY_API_SECRET=your-api-secret
+CLOUDINARY_FOLDER=campus-event-rsvp/events
 ```
 
 Notes:
 1. `FRONTEND_ORIGINS` is a comma-separated allowlist used by backend CORS checks.
 2. For multiple local clients, use values like `http://localhost:5173,http://127.0.0.1:5173`.
+3. Keep real secrets only in local `.env` files or deployment dashboards. Do not commit them.
 
 Reference template:
 `backend/.env.example`
@@ -148,6 +154,59 @@ npm run dev:frontend
 Default URLs:
 1. Frontend: `http://localhost:5173`
 2. Backend health: `http://localhost:5050/api/health`
+
+## Production Deployment (Render + Vercel/Netlify)
+Use this release order to avoid broken API links during first deploy.
+
+### 1) Deploy backend to Render first
+Build and start settings:
+1. Root directory: `backend`
+2. Build command: `npm install`
+3. Start command: `npm run start`
+
+Required backend environment variables:
+1. `PORT` (Render usually injects this automatically)
+2. `MONGODB_URI`
+3. `JWT_SECRET`
+4. `FRONTEND_ORIGINS` (use your production frontend URL)
+5. `IMAGE_STORAGE=cloudinary`
+6. `CLOUDINARY_CLOUD_NAME`
+7. `CLOUDINARY_API_KEY`
+8. `CLOUDINARY_API_SECRET`
+9. `CLOUDINARY_FOLDER` (recommended: `campus-event-rsvp/events`)
+
+Backend validation checklist:
+1. `GET /api/health` returns 200
+2. Event image upload endpoint returns `provider: cloudinary`
+3. CORS accepts only configured frontend origins
+
+### 2) Deploy frontend to Vercel or Netlify
+Build settings:
+1. Root directory: `frontend`
+2. Build command: `npm run build`
+3. Publish directory: `dist`
+
+Required frontend environment variable:
+1. `VITE_API_BASE_URL=https://<your-render-service>/api`
+
+Frontend validation checklist:
+1. Auth login/register works against live backend
+2. Events list and details load from live API
+3. Uploaded Cloudinary images render correctly in cards/details
+
+### 3) Release gate command (run before production push)
+From repo root:
+
+```bash
+npm run verify:release
+```
+
+What it runs:
+1. Backend env validation
+2. Backend tests
+3. Frontend tests
+4. Frontend lint
+5. Frontend production build
 
 ## Database Initialization and Seed Data
 The backend includes an idempotent seed script.
@@ -251,11 +310,16 @@ Seed profile summary:
 
 ## Available Scripts
 Root scripts:
-1. `npm run install:all`
-2. `npm run dev:frontend`
-3. `npm run dev:backend`
-4. `npm run build:frontend`
-5. `npm run lint:frontend`
+1. `npm run install`
+2. `npm run install:all`
+3. `npm run dev:frontend`
+4. `npm run dev:backend`
+5. `npm run build:frontend`
+6. `npm run lint:frontend`
+7. `npm run start:backend`
+8. `npm run test`
+9. `npm run check:env`
+10. `npm run verify:release`
 
 Backend scripts:
 1. `npm --prefix backend run dev`
