@@ -85,7 +85,7 @@ export default function MySchedule() {
   return (
     <div className="bg-gray-50 min-h-screen">
       {/* Header */}
-      <div className="bg-white border-b sticky top-0 z-40">
+      <div className="bg-white sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
           <BackButton to="/dashboard" label="Back to Dashboard" />
           <div className="flex items-center justify-between mt-4">
