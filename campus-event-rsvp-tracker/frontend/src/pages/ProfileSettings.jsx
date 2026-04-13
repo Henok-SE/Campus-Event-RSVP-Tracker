@@ -82,7 +82,7 @@ export default function ProfileSettings() {
   return (
     <div className="min-h-screen bg-slate-100 p-6">
       <div className="max-w-2xl mx-auto bg-white rounded-3xl shadow-xl p-10">
-        <BackButton to="/dashboard" label="Back to Dashboard" className="mb-6" />
+        <BackButton to="/profile" label="Back to Profile" className="mb-6" />
         <h1 className="text-3xl font-semibold mb-8">Profile Settings</h1>
 
         {errorMessage ? (

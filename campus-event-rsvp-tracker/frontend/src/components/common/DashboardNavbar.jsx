@@ -1,71 +1,16 @@
 // src/components/common/DashboardNavbar.jsx
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { LogOut, Calendar, Settings, HelpCircle, Bell, Trash2, ClipboardCheck, Sparkles, Plus } from 'lucide-react';
-import {
-  getApiError,
-  deleteNotification,
-  getNotifications,
-  markAllNotificationsRead,
-  markNotificationRead
-} from '../../services/api';
+import { LogOut, Calendar, Settings, HelpCircle, Bell, ClipboardCheck, Sparkles, Plus, User } from 'lucide-react';
+import { useNotifications } from '../../hooks/useNotifications';
 
-const formatNotificationTime = (value) => {
-  if (!value) {
-    return 'Just now';
-  }
-
-  const createdAt = new Date(value);
-  if (Number.isNaN(createdAt.getTime())) {
-    return 'Just now';
-  }
-
-  const diffMinutes = Math.floor((Date.now() - createdAt.getTime()) / 60000);
-
-  if (diffMinutes < 1) {
-    return 'Just now';
-  }
-
-  if (diffMinutes < 60) {
-    return `${diffMinutes} min ago`;
-  }
-
-  const diffHours = Math.floor(diffMinutes / 60);
-  if (diffHours < 24) {
-    return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
-  }
-
-  const diffDays = Math.floor(diffHours / 24);
-  if (diffDays === 1) {
-    return 'Yesterday';
-  }
-
-  if (diffDays < 7) {
-    return `${diffDays} days ago`;
-  }
-
-  return createdAt.toLocaleDateString();
-};
-
-const toNotificationVm = (item) => ({
-  id: item?.id,
-  type: item?.type || 'info',
-  title: item?.title || 'Notification',
-  message: item?.message || '',
-  read: Boolean(item?.read),
-  created_at: item?.created_at,
-  eventId: item?.event_id || null
-});
-
-const NOTIFICATIONS_POLL_MS = 45_000;
-
-export default function DashboardNavbar({ rsvpCount }) {
+export default function DashboardNavbar({ rsvpCount = 0 }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   
   const [profileOpen, setProfileOpen] = useState(false);
-  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const { unreadCount } = useNotifications();
 
   const navRef = useRef(null);
 
@@ -73,7 +18,6 @@ export default function DashboardNavbar({ rsvpCount }) {
     function handleClickOutside(event) {
       if (navRef.current && !navRef.current.contains(event.target)) {
         setProfileOpen(false);
-        setNotificationsOpen(false);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
@@ -81,121 +25,6 @@ export default function DashboardNavbar({ rsvpCount }) {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
-
-  const [notifications, setNotifications] = useState([]);
-  const [notificationsLoading, setNotificationsLoading] = useState(false);
-  const [notificationsError, setNotificationsError] = useState('');
-  const [deletingNotificationId, setDeletingNotificationId] = useState('');
-  const notificationsRequestInFlightRef = useRef(false);
-
-  const fetchNotifications = useCallback(async ({ silent = false } = {}) => {
-    if (notificationsRequestInFlightRef.current) {
-      return;
-    }
-
-    notificationsRequestInFlightRef.current = true;
-
-    if (!silent) {
-      setNotificationsLoading(true);
-      setNotificationsError('');
-    }
-
-    try {
-      const response = await getNotifications();
-      const rows = Array.isArray(response?.data?.data) ? response.data.data : [];
-      setNotifications(rows.map((item) => toNotificationVm(item)));
-    } catch (error) {
-      const apiError = getApiError(error, 'Failed to load notifications');
-      setNotificationsError(apiError.message);
-
-      if (!silent) {
-        setNotifications([]);
-      }
-    } finally {
-      notificationsRequestInFlightRef.current = false;
-
-      if (!silent) {
-        setNotificationsLoading(false);
-      }
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchNotifications();
-  }, [fetchNotifications]);
-
-  useEffect(() => {
-    const timerId = window.setInterval(() => {
-      if (!document.hidden) {
-        fetchNotifications({ silent: true });
-      }
-    }, NOTIFICATIONS_POLL_MS);
-
-    return () => {
-      window.clearInterval(timerId);
-    };
-  }, [fetchNotifications]);
-
-  const unreadCount = notifications.filter(n => !n.read).length;
-
-  const markAllAsRead = async () => {
-    if (unreadCount === 0) {
-      return;
-    }
-
-    const snapshot = notifications;
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
-
-    try {
-      await markAllNotificationsRead();
-    } catch (error) {
-      const apiError = getApiError(error, 'Failed to update notifications');
-      setNotifications(snapshot);
-      setNotificationsError(apiError.message);
-    }
-  };
-
-  const handleNotificationClick = async (notification) => {
-    setNotificationsOpen(false);
-
-    if (!notification.read) {
-      const snapshot = notifications;
-      setNotifications((prev) => prev.map((n) => (
-        n.id === notification.id ? { ...n, read: true } : n
-      )));
-
-      try {
-        await markNotificationRead(notification.id);
-      } catch {
-        setNotifications(snapshot);
-      }
-    }
-
-    if (notification.eventId) {
-      navigate(`/event/${notification.eventId}`);
-    }
-  };
-
-  const handleDeleteNotification = async (notificationId) => {
-    if (!notificationId || deletingNotificationId) {
-      return;
-    }
-
-    const snapshot = notifications;
-    setDeletingNotificationId(notificationId);
-    setNotificationsError('');
-    setNotifications((prev) => prev.filter((item) => item.id !== notificationId));
-
-    try {
-      await deleteNotification(notificationId);
-    } catch (error) {
-      const apiError = getApiError(error, 'Failed to delete notification');
-      setNotifications(snapshot);
-      setNotificationsError(apiError.message);
-    } finally {
-      setDeletingNotificationId('');
-    }
-  };
 
   const handleLogout = () => {
     logout();
@@ -221,15 +50,11 @@ export default function DashboardNavbar({ rsvpCount }) {
           <div className="relative">
             <button 
               onClick={() => {
-                const nextOpen = !notificationsOpen;
-                setNotificationsOpen(nextOpen);
-                if (nextOpen) {
-                  setProfileOpen(false);
-                  fetchNotifications();
-                }
+                setProfileOpen(false);
+                navigate('/notifications');
               }}
               aria-label="Notifications"
-              className="relative inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-full bg-blue-600 text-white transition-all duration-200 hover:bg-blue-700 hover:shadow-md hover:-translate-y-0.5"
+              className="relative inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-full bg-blue-600 text-white hover:text-white transition-all duration-200 hover:bg-blue-700 hover:shadow-md hover:-translate-y-0.5"
             >
               <Bell className="h-5 w-5 text-white" />
               {unreadCount > 0 && (
@@ -238,61 +63,6 @@ export default function DashboardNavbar({ rsvpCount }) {
                 </span>
               )}
             </button>
-
-            {notificationsOpen && (
-              <div className="absolute right-0 mt-3 w-80 bg-white rounded-2xl shadow-lg border border-slate-200 py-2 z-50 max-h-105 overflow-auto">
-                <div className="px-5 py-3 border-b flex items-center justify-between">
-                  <h3 className="font-semibold">Notifications</h3>
-                  {unreadCount > 0 && (
-                    <button onClick={markAllAsRead} className="text-xs font-medium text-blue-600 hover:underline">
-                      Mark all read
-                    </button>
-                  )}
-                </div>
-
-                {notificationsLoading ? (
-                  <p className="text-center py-8 text-sm text-slate-500">Loading notifications...</p>
-                ) : notificationsError ? (
-                  <div className="px-5 py-5">
-                    <p className="text-sm text-red-600">{notificationsError}</p>
-                    <button onClick={fetchNotifications} className="mt-2 cursor-pointer text-xs text-blue-600 hover:underline">
-                      Retry
-                    </button>
-                  </div>
-                ) : notifications.length === 0 ? (
-                  <p className="text-center py-8 text-sm text-slate-500">No new notifications</p>
-                ) : (
-                  notifications.map(notif => (
-                    <div 
-                      key={notif.id}
-                      onClick={() => handleNotificationClick(notif)}
-                      className={`px-5 py-4 hover:bg-slate-50 transition-colors cursor-pointer border-b last:border-b-0 ${!notif.read ? 'bg-blue-50' : ''}`}
-                    >
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="min-w-0">
-                          <p className="text-xs uppercase tracking-[0.08em] font-medium text-slate-500">{notif.title}</p>
-                          <p className="text-sm text-slate-700 leading-relaxed">{notif.message}</p>
-                          <p className="text-xs text-slate-500 mt-1.5">{formatNotificationTime(notif.created_at)}</p>
-                        </div>
-
-                        <button
-                          type="button"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            handleDeleteNotification(notif.id);
-                          }}
-                          disabled={deletingNotificationId === notif.id}
-                          className="shrink-0 rounded-full p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50"
-                          aria-label="Delete notification"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            )}
           </div>
 
           <Link
@@ -309,7 +79,6 @@ export default function DashboardNavbar({ rsvpCount }) {
             <button
               onClick={() => {
                 setProfileOpen(!profileOpen);
-                if (!profileOpen) setNotificationsOpen(false);
               }}
               aria-label="Profile menu"
               className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white font-semibold hover:bg-blue-700 transition-all duration-200 shadow-sm hover:shadow-md"
@@ -334,6 +103,14 @@ export default function DashboardNavbar({ rsvpCount }) {
 
                 <Link to="/my-schedule" onClick={() => setProfileOpen(false)} className="flex items-center gap-3 px-5 py-3.5 hover:bg-slate-50 transition-colors">
                   <Calendar className="w-5 h-5" /> My Schedule
+                </Link>
+
+                <Link to="/profile" onClick={() => setProfileOpen(false)} className="flex items-center gap-3 px-5 py-3.5 hover:bg-slate-50 transition-colors">
+                  <User className="w-5 h-5" /> Profile
+                </Link>
+
+                <Link to="/notifications" onClick={() => setProfileOpen(false)} className="flex items-center gap-3 px-5 py-3.5 hover:bg-slate-50 transition-colors">
+                  <Bell className="w-5 h-5" /> Notifications
                 </Link>
 
                 <Link to="/profile-settings" onClick={() => setProfileOpen(false)} className="flex items-center gap-3 px-5 py-3.5 hover:bg-slate-50 transition-colors">
