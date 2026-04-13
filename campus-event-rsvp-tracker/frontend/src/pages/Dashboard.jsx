@@ -356,7 +356,7 @@ export default function Dashboard() {
                 <button 
                   key={cat}
                   onClick={() => setActiveCategory(cat)}
-                  className={`px-5 py-3 rounded-xl text-sm font-medium transition-all duration-200 hover:-translate-y-0.5 ${
+                  className={`cursor-pointer px-5 py-3 rounded-xl text-sm font-medium transition-all duration-200 hover:-translate-y-0.5 ${
                     activeCategory === cat ? "bg-blue-600 text-white shadow-sm" : "bg-slate-100 hover:bg-slate-200 text-slate-700"
                   }`}
                 >
@@ -369,7 +369,7 @@ export default function Dashboard() {
 
         {/* Events Grid + My Schedule */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 pb-20 grid lg:grid-cols-3 gap-8 items-start">
-          <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-7">
+          <div className="order-2 lg:order-1 lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-7">
             {errorMessage ? (
               <div className="col-span-full rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-700">
                 {errorMessage}
@@ -463,7 +463,7 @@ export default function Dashboard() {
           </div>
 
           {/* My Schedule Sidebar */}
-          <div className="self-start h-fit border border-slate-200 bg-slate-50/70 rounded-3xl p-5 sm:p-6 lg:sticky lg:top-24 shadow-[0_10px_30px_rgba(15,23,42,0.08)] flex flex-col">
+          <div className="order-1 lg:order-2 self-start h-fit border border-slate-200 bg-slate-50/70 rounded-3xl p-5 sm:p-6 lg:sticky lg:top-24 shadow-[0_10px_30px_rgba(15,23,42,0.08)] flex flex-col">
             <div className="mb-4 flex items-center gap-3">
               <div className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100 text-blue-500">
                 <Calendar className="h-4.5 w-4.5" aria-hidden="true" />
@@ -510,7 +510,7 @@ export default function Dashboard() {
                       </div>
                       <button 
                         onClick={() => handleRSVPAction(ev.id)} 
-                        className="opacity-0 group-hover:opacity-100 p-1.5 text-slate-400 hover:text-red-500 transition-all duration-200 rounded-full hover:bg-red-50"
+                        className="cursor-pointer opacity-100 sm:opacity-0 sm:group-hover:opacity-100 p-1.5 text-slate-400 hover:text-red-500 transition-all duration-200 rounded-full hover:bg-red-50"
                         title="Cancel RSVP"
                       >
                         <svg className="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>

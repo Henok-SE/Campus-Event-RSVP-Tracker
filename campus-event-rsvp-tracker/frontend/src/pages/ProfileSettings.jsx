@@ -150,7 +150,7 @@ export default function ProfileSettings() {
                       type="checkbox"
                       checked={isSelected}
                       onChange={() => handleInterestCategoryToggle(category)}
-                      className="h-4 w-4 accent-blue-600"
+                      className="h-4 w-4 cursor-pointer accent-blue-600"
                     />
                     <span>{category}</span>
                   </label>
@@ -175,7 +175,7 @@ export default function ProfileSettings() {
           <button 
             onClick={handleSave}
             disabled={loading}
-            className="w-full bg-blue-600 hover:bg-blue-700 hover:-translate-y-0.5 disabled:bg-blue-400 text-white py-5 rounded-2xl font-semibold transition-all duration-200"
+            className="w-full cursor-pointer bg-blue-600 hover:bg-blue-700 hover:-translate-y-0.5 disabled:bg-blue-400 text-white py-5 rounded-2xl font-semibold transition-all duration-200"
           >
             {loading ? 'Saving...' : 'Save Changes'}
           </button>

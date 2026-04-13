@@ -229,9 +229,9 @@ export default function DashboardNavbar({ rsvpCount }) {
                 }
               }}
               aria-label="Notifications"
-              className="relative inline-flex h-9 w-9 items-center justify-center rounded-full bg-blue-600 text-white transition-all duration-200 hover:bg-blue-700 hover:shadow-md hover:-translate-y-0.5"
+              className="relative inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-full bg-blue-600 text-white transition-all duration-200 hover:bg-blue-700 hover:shadow-md hover:-translate-y-0.5"
             >
-              <Bell className="h-5 w-5" />
+              <Bell className="h-5 w-5 text-white" />
               {unreadCount > 0 && (
                 <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold min-w-5 h-5 px-1 flex items-center justify-center rounded-full shadow-sm">
                   {unreadCount}
@@ -255,7 +255,7 @@ export default function DashboardNavbar({ rsvpCount }) {
                 ) : notificationsError ? (
                   <div className="px-5 py-5">
                     <p className="text-sm text-red-600">{notificationsError}</p>
-                    <button onClick={fetchNotifications} className="mt-2 text-xs text-blue-600 hover:underline">
+                    <button onClick={fetchNotifications} className="mt-2 cursor-pointer text-xs text-blue-600 hover:underline">
                       Retry
                     </button>
                   </div>
@@ -299,7 +299,7 @@ export default function DashboardNavbar({ rsvpCount }) {
             to="/create-event"
             aria-label="Create event"
             title="Create event"
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-blue-600 text-white transition-all duration-200 hover:bg-blue-700 hover:shadow-md hover:-translate-y-0.5"
+            className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-full bg-blue-600 text-white transition-all duration-200 hover:bg-blue-700 hover:shadow-md hover:-translate-y-0.5"
           >
             <Plus className="h-5 w-5" aria-hidden="true" />
           </Link>

@@ -147,7 +147,7 @@ export default function CreateEvent() {
   return (
     <div className="bg-gray-50 min-h-screen">
       {/* Header */}
-      <div className="bg-white border-b">
+      <div className="bg-white">
         <div className="max-w-4xl mx-auto px-6 py-6">
           <BackButton to="/dashboard" label="Back to Dashboard" />
           <h1 className="text-3xl font-bold mt-4">Host an Event</h1>
@@ -187,7 +187,7 @@ export default function CreateEvent() {
                   <button
                     type="button"
                     onClick={(e) => { e.stopPropagation(); removeImage(); }}
-                    className="absolute top-4 right-4 bg-white rounded-full p-2 shadow hover:bg-red-50"
+                    className="absolute top-4 right-4 cursor-pointer bg-white rounded-full p-2 shadow hover:bg-red-50"
                   >
                     <X className="w-5 h-5 text-red-600" />
                   </button>
@@ -360,7 +360,7 @@ export default function CreateEvent() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white py-5 rounded-2xl font-semibold text-lg transition-all flex items-center justify-center gap-3"
+              className="w-full cursor-pointer bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white py-5 rounded-2xl font-semibold text-lg transition-all flex items-center justify-center gap-3"
             >
               {loading ? (
                 <>
