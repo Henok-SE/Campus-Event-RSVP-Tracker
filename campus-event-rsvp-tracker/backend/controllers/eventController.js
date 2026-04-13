@@ -143,7 +143,8 @@ const applyEventFields = (event, payload = {}) => {
     duration_minutes,
     capacity,
     category,
-    image_url
+    image_url,
+    image
   } = payload;
 
   const normalizedTags = normalizeTags(payload.tags, category ?? event.category);
@@ -211,8 +212,9 @@ const applyEventFields = (event, payload = {}) => {
     }
   }
 
-  if (image_url !== undefined) {
-    event.image_url = image_url;
+  const resolvedImageUrl = image_url !== undefined ? image_url : image;
+  if (resolvedImageUrl !== undefined) {
+    event.image_url = resolvedImageUrl;
   }
 
   return null;
@@ -286,11 +288,22 @@ exports.uploadEventImage = async (req, res) => {
         originalFilename: req.file.originalname
       });
 
+      const uploadedImageUrl = uploaded?.secure_url || uploaded?.url || "";
+
+      if (!uploadedImageUrl) {
+        return sendError(res, {
+          status: 500,
+          code: "UPLOAD_FAILED",
+          message: "Cloudinary did not return an image URL"
+        });
+      }
+
       return sendSuccess(res, {
         status: 201,
         message: "Image uploaded",
         data: {
-          image_url: uploaded.secure_url,
+          image_url: uploadedImageUrl,
+          image: uploadedImageUrl,
           file_path: null,
           provider: "cloudinary",
           public_id: uploaded.public_id
@@ -306,6 +319,7 @@ exports.uploadEventImage = async (req, res) => {
       message: "Image uploaded",
       data: {
         image_url: filePath,
+        image: filePath,
         file_path: filePath,
         provider: "local"
       }
@@ -331,6 +345,7 @@ exports.createEvent = async (req, res) => {
       capacity,
       category,
       image_url,
+      image,
       status
     } = req.body;
 
@@ -383,6 +398,8 @@ exports.createEvent = async (req, res) => {
       });
     }
 
+    const resolvedImageUrl = image_url !== undefined ? image_url : image;
+
     const normalizedTags = normalizeTags(req.body.tags, category);
     const effectiveStatus = isAdmin(req.user) ? (status || "Published") : REVIEWABLE_EVENT_STATUS;
 
@@ -396,7 +413,7 @@ exports.createEvent = async (req, res) => {
       capacity: normalizedCapacity,
       category: category || normalizedTags[0] || undefined,
       tags: normalizedTags,
-      image_url,
+      image_url: resolvedImageUrl,
       status: effectiveStatus,
       created_by: req.user.id,
       submitted_at: new Date(),

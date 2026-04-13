@@ -91,7 +91,12 @@ export default function CreateEvent() {
 
       if (imageFile) {
         const uploadResponse = await uploadEventImage(imageFile);
-        imageUrl = uploadResponse?.data?.data?.image_url;
+        const uploadPayload = uploadResponse?.data?.data || uploadResponse?.data || {};
+        imageUrl = uploadPayload.image_url || uploadPayload.image || uploadPayload.secure_url || uploadPayload.url;
+
+        if (!imageUrl) {
+          throw new Error('Image upload succeeded but no image URL was returned');
+        }
       }
 
       const durationHours = Number(formData.duration_hours || 0);
