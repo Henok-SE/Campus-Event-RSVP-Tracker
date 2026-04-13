@@ -330,6 +330,37 @@ describe("Backend integration tests", () => {
     expect(updateRes.body.error.code).toBe("VALIDATION_ERROR");
   });
 
+  test("PATCH /api/auth/me allows admin updates without interests", async () => {
+    const hashed = await bcrypt.hash("pass1234", 10);
+
+    const admin = await User.create({
+      name: "Admin Profile",
+      email: "admin.profile@example.com",
+      student_id: "3305/18",
+      password: hashed,
+      role: "Admin",
+      interest_categories: [],
+      interest_keywords: []
+    });
+
+    const token = jwt.sign({ id: admin._id, role: admin.role }, process.env.JWT_SECRET);
+
+    const updateRes = await request(app)
+      .patch("/api/auth/me")
+      .set("Authorization", `Bearer ${token}`)
+      .send({
+        name: "Admin Updated",
+        email: "admin.updated@example.com",
+        interest_categories: [],
+        interest_keywords: []
+      });
+
+    expect(updateRes.status).toBe(200);
+    expect(updateRes.body.success).toBe(true);
+    expect(updateRes.body.data.name).toBe("Admin Updated");
+    expect(updateRes.body.data.email).toBe("admin.updated@example.com");
+  });
+
   test("POST /api/events/upload-image uploads image for authenticated user", async () => {
     const hashed = await bcrypt.hash("pass1234", 10);
 
@@ -815,6 +846,127 @@ describe("Backend integration tests", () => {
 
     expect(queueRes.status).toBe(403);
     expect(queueRes.body.error.code).toBe("FORBIDDEN");
+  });
+
+  test("admin can update and delete events they do not own", async () => {
+    const hashed = await bcrypt.hash("pass1234", 10);
+
+    const admin = await User.create({
+      name: "Admin Override",
+      email: "admin.override@example.com",
+      student_id: "3341/18",
+      password: hashed,
+      role: "Admin"
+    });
+
+    const owner = await User.create({
+      name: "Event Owner",
+      email: "event.owner@example.com",
+      student_id: "3342/18",
+      password: hashed,
+      role: "Student"
+    });
+
+    const event = await Event.create({
+      title: "Owner Event",
+      status: "Published",
+      created_by: owner._id,
+      attending_count: 0
+    });
+
+    const adminToken = jwt.sign({ id: admin._id, role: admin.role }, process.env.JWT_SECRET);
+
+    const updateRes = await request(app)
+      .patch(`/api/events/${event._id}`)
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({
+        title: "Admin Updated Event",
+        status: "Cancelled"
+      });
+
+    expect(updateRes.status).toBe(200);
+    expect(updateRes.body.success).toBe(true);
+    expect(updateRes.body.data.title).toBe("Admin Updated Event");
+    expect(updateRes.body.data.status).toBe("Cancelled");
+
+    const deleteRes = await request(app)
+      .delete(`/api/events/${event._id}`)
+      .set("Authorization", `Bearer ${adminToken}`);
+
+    expect(deleteRes.status).toBe(200);
+    expect(deleteRes.body.success).toBe(true);
+
+    const deletedEvent = await Event.findById(event._id);
+    expect(deletedEvent).toBeNull();
+  });
+
+  test("admin stats endpoint returns counts and blocks non-admins", async () => {
+    const hashed = await bcrypt.hash("pass1234", 10);
+
+    const admin = await User.create({
+      name: "Stats Admin",
+      email: "stats.admin@example.com",
+      student_id: "3343/18",
+      password: hashed,
+      role: "Admin"
+    });
+
+    const student = await User.create({
+      name: "Stats Student",
+      email: "stats.student@example.com",
+      student_id: "3344/18",
+      password: hashed,
+      role: "Student"
+    });
+
+    const publishedEvent = await Event.create({
+      title: "Published Stats Event",
+      status: "Published",
+      created_by: student._id,
+      attending_count: 0
+    });
+
+    await Event.create({
+      title: "Pending Stats Event",
+      status: "Pending",
+      created_by: student._id,
+      attending_count: 0
+    });
+
+    await Event.create({
+      title: "Rejected Stats Event",
+      status: "Rejected",
+      created_by: student._id,
+      attending_count: 0
+    });
+
+    await RSVP.create({
+      user_id: student._id,
+      event_id: publishedEvent._id,
+      status: "Confirmed"
+    });
+
+    const adminToken = jwt.sign({ id: admin._id, role: admin.role }, process.env.JWT_SECRET);
+    const studentToken = jwt.sign({ id: student._id, role: student.role }, process.env.JWT_SECRET);
+
+    const statsRes = await request(app)
+      .get("/api/events/admin/stats")
+      .set("Authorization", `Bearer ${adminToken}`);
+
+    expect(statsRes.status).toBe(200);
+    expect(statsRes.body.success).toBe(true);
+    expect(statsRes.body.data.total_events).toBe(3);
+    expect(statsRes.body.data.pending_events).toBe(1);
+    expect(statsRes.body.data.published_events).toBe(1);
+    expect(statsRes.body.data.rejected_events).toBe(1);
+    expect(statsRes.body.data.total_rsvps).toBe(1);
+
+    const forbiddenRes = await request(app)
+      .get("/api/events/admin/stats")
+      .set("Authorization", `Bearer ${studentToken}`);
+
+    expect(forbiddenRes.status).toBe(403);
+    expect(forbiddenRes.body.error.code).toBe("FORBIDDEN");
   });
 
   test("notifications API supports CRUD read flows", async () => {

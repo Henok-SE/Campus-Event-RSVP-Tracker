@@ -1,7 +1,7 @@
 // src/components/common/DashboardNavbar.jsx
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { Calendar, Bell, Sparkles, Plus } from 'lucide-react';
+import { Calendar, Bell, Sparkles, Plus, Shield } from 'lucide-react';
 import { useNotifications } from '../../hooks/useNotifications';
 
 export default function DashboardNavbar({ rsvpCount = 0 }) {
@@ -49,6 +49,17 @@ export default function DashboardNavbar({ rsvpCount = 0 }) {
           >
             <Plus className="h-5 w-5" aria-hidden="true" />
           </Link>
+
+          {user?.role === 'Admin' ? (
+            <Link
+              to="/admin"
+              aria-label="Open admin control center"
+              title="Admin control center"
+              className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-full bg-slate-700 text-white transition-all duration-200 hover:bg-slate-800 hover:shadow-md hover:-translate-y-0.5"
+            >
+              <Shield className="h-5 w-5" aria-hidden="true" />
+            </Link>
+          ) : null}
 
           <button
             onClick={() => navigate('/profile')}

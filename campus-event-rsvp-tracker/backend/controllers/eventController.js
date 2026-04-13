@@ -560,7 +560,7 @@ exports.updateEvent = async (req, res) => {
       });
     }
 
-    if (String(event.created_by) !== String(req.user.id)) {
+    if (!isAdmin(req.user) && String(event.created_by) !== String(req.user.id)) {
       return sendError(res, {
         status: 403,
         code: "FORBIDDEN",
@@ -663,6 +663,51 @@ exports.getPendingReviewEvents = async (req, res) => {
       status: 500,
       code: "EVENT_FETCH_FAILED",
       message: "Error fetching pending review events"
+    });
+  }
+};
+
+exports.getAdminDashboardStats = async (req, res) => {
+  try {
+    const [
+      totalEvents,
+      pendingEvents,
+      publishedEvents,
+      ongoingEvents,
+      completedEvents,
+      rejectedEvents,
+      cancelledEvents,
+      totalRsvps
+    ] = await Promise.all([
+      Event.countDocuments({}),
+      Event.countDocuments({ status: REVIEWABLE_EVENT_STATUS }),
+      Event.countDocuments({ status: "Published" }),
+      Event.countDocuments({ status: "Ongoing" }),
+      Event.countDocuments({ status: "Completed" }),
+      Event.countDocuments({ status: "Rejected" }),
+      Event.countDocuments({ status: "Cancelled" }),
+      RSVP.countDocuments({})
+    ]);
+
+    return sendSuccess(res, {
+      status: 200,
+      message: "Admin dashboard stats fetched",
+      data: {
+        total_events: totalEvents,
+        pending_events: pendingEvents,
+        published_events: publishedEvents,
+        ongoing_events: ongoingEvents,
+        completed_events: completedEvents,
+        rejected_events: rejectedEvents,
+        cancelled_events: cancelledEvents,
+        total_rsvps: totalRsvps
+      }
+    });
+  } catch (err) {
+    return sendError(res, {
+      status: 500,
+      code: "EVENT_STATS_FETCH_FAILED",
+      message: "Error fetching admin dashboard stats"
     });
   }
 };
@@ -849,7 +894,7 @@ exports.deleteEvent = async (req, res) => {
       });
     }
 
-    if (String(event.created_by) !== String(req.user.id)) {
+    if (!isAdmin(req.user) && String(event.created_by) !== String(req.user.id)) {
       return sendError(res, {
         status: 403,
         code: "FORBIDDEN",

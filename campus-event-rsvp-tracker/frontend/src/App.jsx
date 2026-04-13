@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import MainLayout from './components/layout/MainLayout';
 import Landing from './pages/Landing';
 import About from './pages/About';
@@ -10,7 +10,7 @@ import Profile from './pages/Profile';
 import ProfileSettings from './pages/ProfileSettings';
 import MySchedule from './pages/MySchedule';
 import CreateEvent from './pages/CreateEvent';
-import AdminEventReview from './pages/AdminEventReview';
+import AdminControlCenter from './pages/AdminControlCenter';
 import Notifications from './pages/Notifications';
 import NotFound from './pages/NotFound';
 import ProtectedRoute from './components/auth/ProtectedRoute';
@@ -78,10 +78,18 @@ function App() {
           )}
         />
         <Route
+          path="/admin"
+          element={(
+            <ProtectedRoute requiredRole="Admin">
+              <AdminControlCenter />
+            </ProtectedRoute>
+          )}
+        />
+        <Route
           path="/admin/review"
           element={(
             <ProtectedRoute requiredRole="Admin">
-              <AdminEventReview />
+              <Navigate to="/admin" replace />
             </ProtectedRoute>
           )}
         />

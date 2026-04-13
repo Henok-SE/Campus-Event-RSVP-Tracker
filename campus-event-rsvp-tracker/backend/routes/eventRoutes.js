@@ -5,6 +5,7 @@ const {
 	createEvent,
 	uploadEventImage,
 	getEvents,
+	getAdminDashboardStats,
 	getPendingReviewEvents,
 	reviewEventSubmission,
 	resubmitEventForReview,
@@ -22,6 +23,7 @@ const {
 } = require("../middlewares/validateRequest");
 
 router.get("/", optionalAuthMiddleware, getEvents);
+router.get("/admin/stats", authMiddleware, requireRole("Admin"), getAdminDashboardStats);
 router.get("/review/pending", authMiddleware, requireRole("Admin"), getPendingReviewEvents);
 router.get("/:id", optionalAuthMiddleware, validateObjectIdParam("id"), getEventById);
 

@@ -33,6 +33,7 @@ const getInitials = (name = '') => {
 export default function Profile() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const isAdmin = user?.role === 'Admin';
   const [rsvpRecords, setRsvpRecords] = useState([]);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState('');
@@ -249,10 +250,17 @@ export default function Profile() {
                     <Sparkles className="h-4 w-4" aria-hidden="true" />
                     Notifications
                   </Link>
-                  <Link to="/profile-settings" className="flex items-center gap-2 rounded-xl px-3 py-2 text-slate-700 transition-colors hover:bg-slate-100">
-                    <User className="h-4 w-4" aria-hidden="true" />
-                    Preferences
-                  </Link>
+                  {isAdmin ? (
+                    <Link to="/admin" className="flex items-center gap-2 rounded-xl px-3 py-2 text-slate-700 transition-colors hover:bg-slate-100">
+                      <User className="h-4 w-4" aria-hidden="true" />
+                      Admin Control Center
+                    </Link>
+                  ) : (
+                    <Link to="/profile-settings" className="flex items-center gap-2 rounded-xl px-3 py-2 text-slate-700 transition-colors hover:bg-slate-100">
+                      <User className="h-4 w-4" aria-hidden="true" />
+                      Preferences
+                    </Link>
+                  )}
                 </div>
               </article>
 
