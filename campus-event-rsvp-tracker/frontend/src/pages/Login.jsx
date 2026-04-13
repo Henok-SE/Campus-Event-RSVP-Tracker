@@ -213,7 +213,7 @@ export default function Login() {
                     </div>
                   ) : null}
 
-                  <form onSubmit={handleSubmit} className="space-y-6" autoComplete="off">
+                  <form onSubmit={handleSubmit} className="space-y-6" autoComplete="on">
                     {mode === 'register' ? (
                       <>
                         <div>
@@ -225,6 +225,7 @@ export default function Login() {
                             onChange={handleChange}
                             className="w-full px-5 py-4 border border-slate-300 rounded-2xl focus:outline-none focus:border-blue-600"
                             placeholder="Your full name"
+                            autoComplete="name"
                             required
                           />
                         </div>
@@ -238,6 +239,7 @@ export default function Login() {
                             onChange={handleChange}
                             className="w-full px-5 py-4 border border-slate-300 rounded-2xl focus:outline-none focus:border-blue-600"
                             placeholder="you@example.com"
+                            autoComplete="email"
                             required
                           />
                         </div>
@@ -255,6 +257,7 @@ export default function Login() {
                       placeholder="1234/18"
                       pattern="\d{4}/\d{2}"
                       title="Use 1234/18 format"
+                      autoComplete="username"
                       required
                     />
                     </div>
@@ -279,7 +282,7 @@ export default function Login() {
                         onChange={handleChange}
                         className="w-full px-5 py-4 border border-slate-300 rounded-2xl focus:outline-none focus:border-blue-600 pr-12"
                         placeholder="..."
-                        autoComplete="new-password"
+                        autoComplete={mode === 'register' ? 'new-password' : 'current-password'}
                         required
                       />
                       <button
