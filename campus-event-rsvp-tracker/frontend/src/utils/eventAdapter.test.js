@@ -6,6 +6,21 @@ afterEach(() => {
 });
 
 describe('mapApiEvent image normalization', () => {
+  it('uses localhost API fallback for relative upload paths when API base is unset', () => {
+    vi.stubEnv('VITE_API_BASE_URL', '');
+
+    const mapped = mapApiEvent({
+      _id: 'evt-0',
+      title: 'Fallback Event',
+      status: 'Published',
+      image_url: '/uploads/events/fallback.png',
+      event_date: '2030-01-09T09:00:00.000Z',
+      time: '09:00'
+    });
+
+    expect(mapped.image).toBe('http://localhost:5050/uploads/events/fallback.png');
+  });
+
   it('prefixes relative upload paths with API origin', () => {
     vi.stubEnv('VITE_API_BASE_URL', 'https://api.campus-events.example/api');
 

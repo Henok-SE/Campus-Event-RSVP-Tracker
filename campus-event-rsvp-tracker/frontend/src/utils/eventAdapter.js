@@ -3,12 +3,16 @@ import { getLiveEventTiming } from './eventDateTime';
 const DEFAULT_CATEGORY = "General";
 const ABSOLUTE_URL_PATTERN = /^[a-z][a-z\d+\-.]*:/i;
 const LOCALHOST_HOST_PATTERN = /^(localhost|127\.0\.0\.1)$/i;
+const FALLBACK_API_BASE_URL = "http://localhost:5050/api";
+
+const normalizeApiBaseUrl = (rawBaseUrl) => {
+  const resolvedBaseUrl = (rawBaseUrl || FALLBACK_API_BASE_URL).trim().replace(/\/+$/, "");
+
+  return resolvedBaseUrl.endsWith("/api") ? resolvedBaseUrl : `${resolvedBaseUrl}/api`;
+};
 
 const getApiOrigin = () => {
-  const configuredApiBase = import.meta.env.VITE_API_BASE_URL;
-  if (!configuredApiBase) {
-    return "";
-  }
+  const configuredApiBase = normalizeApiBaseUrl(import.meta.env.VITE_API_BASE_URL);
 
   try {
     return new URL(configuredApiBase).origin;
