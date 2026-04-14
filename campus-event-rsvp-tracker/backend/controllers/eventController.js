@@ -4,6 +4,7 @@ const Notification = require("../models/notification");
 const User = require("../models/users");
 const mongoose = require("mongoose");
 const path = require("path");
+const fs = require("fs");
 const { sendSuccess, sendError } = require("../utils/apiResponse");
 const { FIXED_INTEREST_CATEGORY_LOOKUP } = require("../config/interestOptions");
 const { getConfig } = require("../config/env");
@@ -18,6 +19,7 @@ const PUBLIC_EVENT_STATUSES = ["Published", "Ongoing"];
 const REVIEWABLE_EVENT_STATUS = "Pending";
 const ABSOLUTE_URL_PATTERN = /^[a-z][a-z\d+\-.]*:/i;
 const LOCALHOST_HOST_PATTERN = /^(localhost|127\.0\.0\.1)$/i;
+const LOCAL_UPLOAD_DIR = path.join(__dirname, "..", "uploads", "events");
 
 const isAdmin = (user = {}) => user.role === "Admin";
 
@@ -199,6 +201,39 @@ const resolveImageUrlForResponse = (rawImageUrl, req) => {
   return imageUrl;
 };
 
+const resolveUploadExtension = (file = {}) => {
+  const fromOriginalName = path.extname(file.originalname || "").toLowerCase();
+  if (fromOriginalName) {
+    return fromOriginalName;
+  }
+
+  switch (file.mimetype) {
+    case "image/png":
+      return ".png";
+    case "image/webp":
+      return ".webp";
+    case "image/gif":
+      return ".gif";
+    default:
+      return ".jpg";
+  }
+};
+
+const persistUploadLocally = async (file = {}) => {
+  if (file.buffer && file.buffer.length > 0) {
+    fs.mkdirSync(LOCAL_UPLOAD_DIR, { recursive: true });
+
+    const fileName = `${Date.now()}-${Math.round(Math.random() * 1e9)}${resolveUploadExtension(file)}`;
+    const targetPath = path.join(LOCAL_UPLOAD_DIR, fileName);
+
+    await fs.promises.writeFile(targetPath, file.buffer);
+    return `/uploads/events/${fileName}`;
+  }
+
+  const fileName = file.filename || path.basename(file.path || "");
+  return fileName ? `/uploads/events/${fileName}` : "";
+};
+
 const serializeEvent = (eventDoc, attendingCount, req) => {
   const event = eventDoc.toObject ? eventDoc.toObject() : eventDoc;
   const tags = Array.isArray(event.tags) && event.tags.length > 0
@@ -368,33 +403,54 @@ exports.uploadEventImage = async (req, res) => {
         });
       }
 
-      const uploaded = await uploadBufferToCloudinary({
-        fileBuffer: req.file.buffer,
-        folder: config.cloudinary.folder,
-        originalFilename: req.file.originalname
-      });
+      try {
+        const uploaded = await uploadBufferToCloudinary({
+          fileBuffer: req.file.buffer,
+          folder: config.cloudinary.folder,
+          originalFilename: req.file.originalname
+        });
 
-      const uploadedImageUrl = uploaded?.secure_url || uploaded?.url || "";
+        const uploadedImageUrl = uploaded?.secure_url || uploaded?.url || "";
 
-      if (!uploadedImageUrl) {
-        return sendError(res, {
-          status: 500,
-          code: "UPLOAD_FAILED",
-          message: "Cloudinary did not return an image URL"
+        if (!uploadedImageUrl) {
+          return sendError(res, {
+            status: 500,
+            code: "UPLOAD_FAILED",
+            message: "Cloudinary did not return an image URL"
+          });
+        }
+
+        return sendSuccess(res, {
+          status: 201,
+          message: "Image uploaded",
+          data: {
+            image_url: uploadedImageUrl,
+            image: uploadedImageUrl,
+            file_path: null,
+            provider: "cloudinary",
+            public_id: uploaded.public_id
+          }
+        });
+      } catch (cloudinaryError) {
+        const fallbackPath = await persistUploadLocally(req.file);
+
+        if (!fallbackPath) {
+          throw cloudinaryError;
+        }
+
+        const fallbackUrl = resolveImageUrlForResponse(fallbackPath, req);
+
+        return sendSuccess(res, {
+          status: 201,
+          message: "Image uploaded",
+          data: {
+            image_url: fallbackUrl,
+            image: fallbackUrl,
+            file_path: fallbackPath,
+            provider: "local_fallback"
+          }
         });
       }
-
-      return sendSuccess(res, {
-        status: 201,
-        message: "Image uploaded",
-        data: {
-          image_url: uploadedImageUrl,
-          image: uploadedImageUrl,
-          file_path: null,
-          provider: "cloudinary",
-          public_id: uploaded.public_id
-        }
-      });
     }
 
     const fileName = req.file.filename || path.basename(req.file.path || "");
