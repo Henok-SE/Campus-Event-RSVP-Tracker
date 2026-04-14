@@ -16,6 +16,7 @@ const {
 
 const PUBLIC_EVENT_STATUSES = ["Published", "Ongoing"];
 const REVIEWABLE_EVENT_STATUS = "Pending";
+const ABSOLUTE_URL_PATTERN = /^[a-z][a-z\d+\-.]*:/i;
 
 const isAdmin = (user = {}) => user.role === "Admin";
 
@@ -115,7 +116,47 @@ const normalizeTags = (tags, category) => {
   return [];
 };
 
-const serializeEvent = (eventDoc, attendingCount) => {
+const getRequestOrigin = (req) => {
+  if (!req) {
+    return "";
+  }
+
+  const forwardedProto = String(req.headers["x-forwarded-proto"] || "").split(",")[0].trim();
+  const forwardedHost = String(req.headers["x-forwarded-host"] || "").split(",")[0].trim();
+  const protocol = forwardedProto || req.protocol;
+  const host = forwardedHost || (typeof req.get === "function" ? req.get("host") : "");
+
+  if (!protocol || !host) {
+    return "";
+  }
+
+  return `${protocol}://${host}`;
+};
+
+const resolveImageUrlForResponse = (rawImageUrl, req) => {
+  const imageUrl = String(rawImageUrl || "").trim();
+  if (!imageUrl) {
+    return imageUrl;
+  }
+
+  if (ABSOLUTE_URL_PATTERN.test(imageUrl) || imageUrl.startsWith("//")) {
+    return imageUrl;
+  }
+
+  const origin = getRequestOrigin(req);
+
+  if (imageUrl.startsWith("/")) {
+    return origin ? `${origin}${imageUrl}` : imageUrl;
+  }
+
+  if (imageUrl.startsWith("uploads/")) {
+    return origin ? `${origin}/${imageUrl}` : `/${imageUrl}`;
+  }
+
+  return imageUrl;
+};
+
+const serializeEvent = (eventDoc, attendingCount, req) => {
   const event = eventDoc.toObject ? eventDoc.toObject() : eventDoc;
   const tags = Array.isArray(event.tags) && event.tags.length > 0
     ? event.tags
@@ -123,9 +164,11 @@ const serializeEvent = (eventDoc, attendingCount) => {
       ? [event.category]
       : [];
   const durationMinutes = normalizeDurationMinutes(event.duration_minutes) || DEFAULT_EVENT_DURATION_MINUTES;
+  const resolvedImageUrl = resolveImageUrlForResponse(event.image_url, req);
 
   return {
     ...event,
+    image_url: resolvedImageUrl,
     category: event.category || tags[0] || null,
     tags,
     duration_minutes: durationMinutes,
@@ -313,13 +356,14 @@ exports.uploadEventImage = async (req, res) => {
 
     const fileName = req.file.filename || path.basename(req.file.path || "");
     const filePath = `/uploads/events/${fileName}`;
+    const imageUrl = resolveImageUrlForResponse(filePath, req);
 
     return sendSuccess(res, {
       status: 201,
       message: "Image uploaded",
       data: {
-        image_url: filePath,
-        image: filePath,
+        image_url: imageUrl,
+        image: imageUrl,
         file_path: filePath,
         provider: "local"
       }
@@ -443,7 +487,7 @@ exports.createEvent = async (req, res) => {
     return sendSuccess(res, {
       status: 201,
       message: effectiveStatus === "Pending" ? "Event submitted for review" : "Event created",
-      data: serializeEvent(event, 0)
+      data: serializeEvent(event, 0, req)
     });
 
   } catch (err) {
@@ -488,7 +532,7 @@ exports.getEvents = async (req, res) => {
           ? event.attending_count
           : await RSVP.countDocuments({ event_id: event._id });
 
-        return serializeEvent(event, attending);
+        return serializeEvent(event, attending, req);
       })
     );
 
@@ -542,7 +586,7 @@ exports.getEventById = async (req, res) => {
     return sendSuccess(res, {
       status: 200,
       message: "Event fetched",
-      data: serializeEvent(event, attending)
+      data: serializeEvent(event, attending, req)
     });
   } catch (err) {
     return sendError(res, {
@@ -629,7 +673,7 @@ exports.updateEvent = async (req, res) => {
     return sendSuccess(res, {
       status: 200,
       message: "Event updated",
-      data: serializeEvent(event, Number.isInteger(event.attending_count) ? event.attending_count : 0)
+      data: serializeEvent(event, Number.isInteger(event.attending_count) ? event.attending_count : 0, req)
     });
   } catch (err) {
     if (
@@ -666,7 +710,7 @@ exports.getPendingReviewEvents = async (req, res) => {
           ? event.attending_count
           : await RSVP.countDocuments({ event_id: event._id });
 
-        return serializeEvent(event, attending);
+        return serializeEvent(event, attending, req);
       })
     );
 
@@ -797,7 +841,7 @@ exports.reviewEventSubmission = async (req, res) => {
     return sendSuccess(res, {
       status: 200,
       message: decision === "approve" ? "Event approved" : "Event rejected",
-      data: serializeEvent(event, attending)
+      data: serializeEvent(event, attending, req)
     });
   } catch (err) {
     return sendError(res, {
@@ -878,7 +922,7 @@ exports.resubmitEventForReview = async (req, res) => {
     return sendSuccess(res, {
       status: 200,
       message: "Event resubmitted for review",
-      data: serializeEvent(event, attending)
+      data: serializeEvent(event, attending, req)
     });
   } catch (err) {
     return sendError(res, {
