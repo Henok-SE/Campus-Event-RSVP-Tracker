@@ -113,6 +113,7 @@ PORT=5050
 MONGODB_URI=mongodb://127.0.0.1:27017/eventDB
 JWT_SECRET=dev-jwt-secret-change-me
 FRONTEND_ORIGINS=http://localhost:5173
+PUBLIC_API_BASE_URL=http://localhost:5050
 IMAGE_STORAGE=local
 CLOUDINARY_CLOUD_NAME=your-cloud-name
 CLOUDINARY_API_KEY=your-api-key
@@ -123,7 +124,8 @@ CLOUDINARY_FOLDER=campus-event-rsvp/events
 Notes:
 1. `FRONTEND_ORIGINS` is a comma-separated allowlist used by backend CORS checks.
 2. For multiple local clients, use values like `http://localhost:5173,http://127.0.0.1:5173`.
-3. Keep real secrets only in local `.env` files or deployment dashboards. Do not commit them.
+3. `PUBLIC_API_BASE_URL` is recommended in production (for example `https://<your-render-service>`). It helps backend responses resolve upload image URLs correctly behind proxies.
+4. Keep real secrets only in local `.env` files or deployment dashboards. Do not commit them.
 
 Reference template:
 `backend/.env.example`
@@ -173,11 +175,12 @@ Required backend environment variables:
 2. `MONGODB_URI`
 3. `JWT_SECRET`
 4. `FRONTEND_ORIGINS` (use your production frontend URL)
-5. `IMAGE_STORAGE=cloudinary`
-6. `CLOUDINARY_CLOUD_NAME`
-7. `CLOUDINARY_API_KEY`
-8. `CLOUDINARY_API_SECRET`
-9. `CLOUDINARY_FOLDER` (recommended: `campus-event-rsvp/events`)
+5. `PUBLIC_API_BASE_URL` (example: `https://<your-render-service>`)
+6. `IMAGE_STORAGE=cloudinary`
+7. `CLOUDINARY_CLOUD_NAME`
+8. `CLOUDINARY_API_KEY`
+9. `CLOUDINARY_API_SECRET`
+10. `CLOUDINARY_FOLDER` (recommended: `campus-event-rsvp/events`)
 
 Backend validation checklist:
 1. `GET /api/health` returns 200

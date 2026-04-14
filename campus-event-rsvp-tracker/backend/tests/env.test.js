@@ -93,4 +93,27 @@ describe("Environment configuration", () => {
       folder: "custom-folder/events"
     });
   });
+
+  test("throws in production when image storage is local", () => {
+    process.env.JWT_SECRET = "abc123";
+    process.env.NODE_ENV = "production";
+    process.env.IMAGE_STORAGE = "local";
+
+    const { validateEnv } = require("../config/env");
+
+    expect(() => validateEnv()).toThrow(/IMAGE_STORAGE=cloudinary/);
+  });
+
+  test("allows production when cloudinary is configured", () => {
+    process.env.JWT_SECRET = "abc123";
+    process.env.NODE_ENV = "production";
+    process.env.IMAGE_STORAGE = "cloudinary";
+    process.env.CLOUDINARY_CLOUD_NAME = "demo-cloud";
+    process.env.CLOUDINARY_API_KEY = "key-123";
+    process.env.CLOUDINARY_API_SECRET = "secret-456";
+
+    const { validateEnv } = require("../config/env");
+
+    expect(() => validateEnv()).not.toThrow();
+  });
 });

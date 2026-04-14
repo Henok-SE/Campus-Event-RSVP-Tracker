@@ -20,6 +20,8 @@ services:
         sync: false
       - key: FRONTEND_ORIGINS
         sync: false
+      - key: PUBLIC_API_BASE_URL
+        sync: false
       - key: CLOUDINARY_CLOUD_NAME
         sync: false
       - key: CLOUDINARY_API_KEY

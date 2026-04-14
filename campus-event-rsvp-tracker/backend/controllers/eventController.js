@@ -17,6 +17,7 @@ const {
 const PUBLIC_EVENT_STATUSES = ["Published", "Ongoing"];
 const REVIEWABLE_EVENT_STATUS = "Pending";
 const ABSOLUTE_URL_PATTERN = /^[a-z][a-z\d+\-.]*:/i;
+const LOCALHOST_HOST_PATTERN = /^(localhost|127\.0\.0\.1)$/i;
 
 const isAdmin = (user = {}) => user.role === "Admin";
 
@@ -116,6 +117,47 @@ const normalizeTags = (tags, category) => {
   return [];
 };
 
+const normalizeImageUrlForStorage = (rawImageUrl) => {
+  const imageUrl = String(rawImageUrl || "").trim();
+  if (!imageUrl) {
+    return imageUrl;
+  }
+
+  if (ABSOLUTE_URL_PATTERN.test(imageUrl)) {
+    try {
+      const parsed = new URL(imageUrl);
+
+      if (LOCALHOST_HOST_PATTERN.test(parsed.hostname) && parsed.pathname.startsWith("/uploads/")) {
+        return `${parsed.pathname}${parsed.search || ""}`;
+      }
+    } catch {
+      return imageUrl;
+    }
+
+    return imageUrl;
+  }
+
+  if (imageUrl.startsWith("uploads/")) {
+    return `/${imageUrl}`;
+  }
+
+  return imageUrl;
+};
+
+const getConfiguredPublicOrigin = () => {
+  const configuredBaseUrl = String(process.env.PUBLIC_API_BASE_URL || process.env.BACKEND_PUBLIC_URL || "").trim();
+
+  if (!configuredBaseUrl) {
+    return "";
+  }
+
+  try {
+    return new URL(configuredBaseUrl).origin;
+  } catch {
+    return "";
+  }
+};
+
 const getRequestOrigin = (req) => {
   if (!req) {
     return "";
@@ -125,8 +167,9 @@ const getRequestOrigin = (req) => {
   const forwardedHost = String(req.headers["x-forwarded-host"] || "").split(",")[0].trim();
   const protocol = forwardedProto || req.protocol;
   const host = forwardedHost || (typeof req.get === "function" ? req.get("host") : "");
+  const normalizedHost = String(host).split(":")[0].trim().toLowerCase();
 
-  if (!protocol || !host) {
+  if (!protocol || !host || LOCALHOST_HOST_PATTERN.test(normalizedHost)) {
     return "";
   }
 
@@ -134,7 +177,7 @@ const getRequestOrigin = (req) => {
 };
 
 const resolveImageUrlForResponse = (rawImageUrl, req) => {
-  const imageUrl = String(rawImageUrl || "").trim();
+  let imageUrl = normalizeImageUrlForStorage(rawImageUrl);
   if (!imageUrl) {
     return imageUrl;
   }
@@ -143,7 +186,7 @@ const resolveImageUrlForResponse = (rawImageUrl, req) => {
     return imageUrl;
   }
 
-  const origin = getRequestOrigin(req);
+  const origin = getConfiguredPublicOrigin() || getRequestOrigin(req);
 
   if (imageUrl.startsWith("/")) {
     return origin ? `${origin}${imageUrl}` : imageUrl;
@@ -257,7 +300,7 @@ const applyEventFields = (event, payload = {}) => {
 
   const resolvedImageUrl = image_url !== undefined ? image_url : image;
   if (resolvedImageUrl !== undefined) {
-    event.image_url = resolvedImageUrl;
+    event.image_url = normalizeImageUrlForStorage(resolvedImageUrl);
   }
 
   return null;
@@ -457,7 +500,7 @@ exports.createEvent = async (req, res) => {
       capacity: normalizedCapacity,
       category: category || normalizedTags[0] || undefined,
       tags: normalizedTags,
-      image_url: resolvedImageUrl,
+      image_url: normalizeImageUrlForStorage(resolvedImageUrl),
       status: effectiveStatus,
       created_by: req.user.id,
       submitted_at: new Date(),

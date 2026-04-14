@@ -61,10 +61,18 @@ const getMissingRequiredVars = () => {
 
 const validateEnv = () => {
   const missingVars = getMissingRequiredVars();
+  const imageStorage = parseImageStorage(process.env.IMAGE_STORAGE);
+  const runtimeEnv = String(process.env.NODE_ENV || "").trim().toLowerCase();
 
   if (missingVars.length > 0) {
     throw new Error(
       `Missing required environment variables: ${missingVars.join(", ")}. Set them in backend/.env (see backend/.env.example).`
+    );
+  }
+
+  if (runtimeEnv === "production" && imageStorage !== "cloudinary") {
+    throw new Error(
+      "Invalid production image storage configuration: set IMAGE_STORAGE=cloudinary and configure Cloudinary credentials."
     );
   }
 };
