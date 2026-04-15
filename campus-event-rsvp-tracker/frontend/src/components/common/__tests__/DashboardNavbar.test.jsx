@@ -60,10 +60,45 @@ describe('DashboardNavbar notifications', () => {
   it('navigates to dedicated notifications page on bell click', async () => {
     renderNavbar();
 
-    fireEvent.click(screen.getByRole('button', { name: /notifications/i }));
+    fireEvent.click(screen.getByRole('button', { name: /open notifications/i }));
 
     await waitFor(() => {
       expect(screen.getByTestId('location-path')).toHaveTextContent('/notifications');
+    });
+  });
+
+  it('opens mobile quick actions and navigates to notifications', async () => {
+    renderNavbar();
+
+    const quickActionsButton = screen.getByRole('button', { name: /open quick actions menu/i });
+    expect(quickActionsButton).toHaveAttribute('aria-expanded', 'false');
+
+    fireEvent.click(quickActionsButton);
+
+    expect(quickActionsButton).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByText('Create event')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText('Notifications'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('location-path')).toHaveTextContent('/notifications');
+      expect(quickActionsButton).toHaveAttribute('aria-expanded', 'false');
+    });
+  });
+
+  it('closes mobile quick actions menu on Escape key', async () => {
+    renderNavbar();
+
+    const quickActionsButton = screen.getByRole('button', { name: /open quick actions menu/i });
+
+    fireEvent.click(quickActionsButton);
+    expect(screen.getByText('Create event')).toBeInTheDocument();
+
+    fireEvent.keyDown(document, { key: 'Escape' });
+
+    await waitFor(() => {
+      expect(screen.queryByText('Create event')).not.toBeInTheDocument();
+      expect(quickActionsButton).toHaveAttribute('aria-expanded', 'false');
     });
   });
 
@@ -72,6 +107,7 @@ describe('DashboardNavbar notifications', () => {
 
     renderNavbar();
 
-    expect(screen.getByText('4')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /open notifications/i })).toHaveTextContent('4');
+    expect(screen.getByRole('button', { name: /open quick actions menu/i })).toHaveTextContent('4');
   });
 });
