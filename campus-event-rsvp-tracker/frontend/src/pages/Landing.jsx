@@ -66,7 +66,7 @@ export default function Landing() {
     <>
       {/* HERO - id="home" */}
       <section id="home" className="relative h-screen flex items-center justify-center overflow-hidden bg-cover bg-center"
-        style={{ backgroundImage: "url('https://picsum.photos/id/1016/2000/1200')" }}>
+        style={{ backgroundImage: "url('https://images.unsplash.com/photo-1661160055236-d5f87aafe87b?q=80&w=2200&auto=format&fit=crop')" }}>
         
         <div className="absolute inset-0 bg-linear-to-b from-black/40 via-black/50 to-black/70" />
 
