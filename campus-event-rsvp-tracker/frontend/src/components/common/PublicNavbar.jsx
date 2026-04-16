@@ -61,18 +61,62 @@ export default function PublicNavbar() {
 
       {/* Mobile Menu Dropdown */}
       {isOpen && (
-        <div className="md:hidden absolute top-full left-0 w-full bg-white border-b shadow-xl px-6 py-6 flex flex-col gap-5 z-10 animate-in slide-in-from-top-2">
-          <Link to="/" onClick={() => setIsOpen(false)} className="text-lg font-medium hover:text-blue-600">Home</Link>
-          <Link to="/events" onClick={() => setIsOpen(false)} className="text-lg font-medium hover:text-blue-600">Events</Link>
-          <Link to="/about" onClick={() => setIsOpen(false)} className="text-lg font-medium hover:text-blue-600">About</Link>
-          <Link 
-            to="/login" 
+        <>
+          <button
+            type="button"
+            aria-label="Close mobile menu"
+            className="md:hidden fixed inset-0 z-10 bg-black/35"
             onClick={() => setIsOpen(false)}
-            className="bg-blue-600 text-white text-center px-8 py-4 rounded-2xl font-semibold mt-2"
-          >
-            Login
-          </Link>
-        </div>
+          />
+
+          <div className="md:hidden absolute top-full left-0 w-full z-20 px-4 pt-3">
+            <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-2xl">
+              <Link
+                to="/"
+                onClick={() => setIsOpen(false)}
+                className={`block rounded-xl px-4 py-3 text-base font-medium transition-colors ${
+                  location.pathname === '/'
+                    ? 'bg-slate-100 text-blue-700'
+                    : 'text-slate-800 hover:bg-slate-100 hover:text-blue-700'
+                }`}
+              >
+                Home
+              </Link>
+              <Link
+                to="/events"
+                onClick={() => setIsOpen(false)}
+                className={`block rounded-xl px-4 py-3 text-base font-medium transition-colors ${
+                  location.pathname === '/events'
+                    ? 'bg-slate-100 text-blue-700'
+                    : 'text-slate-800 hover:bg-slate-100 hover:text-blue-700'
+                }`}
+              >
+                Events
+              </Link>
+              <Link
+                to="/about"
+                onClick={() => setIsOpen(false)}
+                className={`block rounded-xl px-4 py-3 text-base font-medium transition-colors ${
+                  location.pathname === '/about'
+                    ? 'bg-slate-100 text-blue-700'
+                    : 'text-slate-800 hover:bg-slate-100 hover:text-blue-700'
+                }`}
+              >
+                About
+              </Link>
+
+              <div className="my-2 h-px bg-slate-200" />
+
+              <Link
+                to="/login"
+                onClick={() => setIsOpen(false)}
+                className="mt-2 block rounded-xl bg-blue-600 px-8 py-3.5 text-center font-semibold text-white hover:bg-blue-700 transition-colors"
+              >
+                Login
+              </Link>
+            </div>
+          </div>
+        </>
       )}
     </nav>
   );
