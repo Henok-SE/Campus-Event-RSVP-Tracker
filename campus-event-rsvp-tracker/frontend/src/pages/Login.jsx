@@ -35,6 +35,20 @@ export default function Login() {
     return candidate && candidate.startsWith('/') ? candidate : '/dashboard';
   }, [location.search]);
 
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const requestedMode = params.get('mode');
+
+    if (requestedMode === 'register') {
+      setMode('register');
+      return;
+    }
+
+    if (requestedMode === 'login') {
+      setMode('login');
+    }
+  }, [location.search]);
+
   const [formData, setFormData] = useState({
     name: '',
     email: '',

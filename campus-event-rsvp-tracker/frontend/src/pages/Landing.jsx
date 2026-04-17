@@ -85,7 +85,7 @@ export default function Landing() {
 
           <div className="flex flex-col sm:flex-row gap-3 sm:gap-5 justify-center">
             <Link 
-              to="/events" 
+              to="/login?mode=register" 
               className="bg-blue-600 hover:bg-blue-700 text-white px-7 py-3.5 sm:px-12 sm:py-5 rounded-2xl font-semibold text-base sm:text-lg transition-all"
             >
              Explore Events →
