@@ -128,25 +128,35 @@ export default function Landing() {
       </section>
 
       {/* HOW IT WORKS + UPCOMING EVENTS - id="events" */}
-      <section id="events" className="bg-slate-50 py-24 px-6">
+      <section id="events" className="bg-slate-50 px-4 py-14 sm:px-6 sm:py-24">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
+          <div className="text-center mb-10 sm:mb-16">
             <p className="uppercase text-blue-600 text-sm font-medium tracking-widest mb-3">SIMPLE &amp; EASY</p>
-            <h2 className="text-5xl font-bold">How it works</h2>
+            <h2 className="text-3xl sm:text-5xl font-bold tracking-tight">How it works</h2>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-10 mb-20">
+          <div className="grid gap-4 md:grid-cols-3 md:gap-10 mb-14 sm:mb-20">
             {[
               { n: "01", t: "Browse", d: "Explore events by category, date, or popularity" },
               { n: "02", t: "RSVP", d: "One tap to save your spot and invite friends" },
               { n: "03", t: "Show Up & Enjoy", d: "Arrive, connect, and make memories" }
             ].map(step => (
-              <div key={step.n} className="text-center">
-                <div className="w-20 h-20 mx-auto bg-blue-600 text-white text-4xl font-bold rounded-3xl flex items-center justify-center mb-6">
-                  {step.n}
+              <div
+                key={step.n}
+                className="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white px-4 py-4 sm:px-6 sm:py-6 md:rounded-3xl md:px-8 md:py-8 shadow-[0_16px_34px_-26px_rgba(15,23,42,0.55)]"
+              >
+                <div className="pointer-events-none absolute -top-14 -right-10 h-24 w-24 rounded-full bg-blue-100/70 blur-2xl" />
+
+                <div className="relative flex items-start gap-4 md:flex-col md:items-center md:text-center">
+                  <div className="shrink-0 w-12 h-12 md:w-20 md:h-20 bg-gradient-to-br from-blue-600 to-cyan-500 text-white text-lg md:text-3xl font-bold rounded-2xl md:rounded-3xl flex items-center justify-center">
+                    {step.n}
+                  </div>
+
+                  <div className="text-left md:text-center">
+                    <h3 className="text-lg sm:text-xl md:text-3xl font-semibold mb-1 md:mb-3">{step.t}</h3>
+                    <p className="text-sm sm:text-base text-slate-600 leading-relaxed">{step.d}</p>
+                  </div>
                 </div>
-                <h3 className="text-3xl font-semibold mb-3">{step.t}</h3>
-                <p className="text-slate-600">{step.d}</p>
               </div>
             ))}
           </div>
