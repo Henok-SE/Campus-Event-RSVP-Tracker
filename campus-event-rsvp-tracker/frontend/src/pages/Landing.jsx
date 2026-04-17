@@ -184,7 +184,12 @@ export default function Landing() {
             ) : (
               <div className="grid md:grid-cols-3 gap-8">
                 {upcoming.map((event) => (
-                  <EventCard key={event.id} event={event} ctaTo={`/event/${event.id}`} ctaLabel="View Details" />
+                  <EventCard
+                    key={event.id}
+                    event={event}
+                    ctaTo={`/login?redirect=/event/${event.id}`}
+                    ctaLabel="View Details"
+                  />
                 ))}
               </div>
             )}
