@@ -164,7 +164,7 @@ export default function Landing() {
           <div>
             <div className="flex justify-between items-end mb-10">
               <h2 className="text-4xl font-bold">Don’t miss out</h2>
-              <Link to="/events" className="text-blue-600 font-medium">View all events →</Link>
+              <Link to="/login?redirect=/events" className="text-blue-600 font-medium">View all events →</Link>
             </div>
 
             {upcomingError ? (
