@@ -65,34 +65,34 @@ export default function Landing() {
   return (
     <>
       {/* HERO - id="home" */}
-      <section id="home" className="relative h-screen flex items-center justify-center overflow-hidden bg-cover bg-center"
+      <section id="home" className="relative min-h-svh sm:min-h-screen flex items-center justify-center overflow-hidden bg-cover bg-center px-4 py-14 sm:px-6 sm:py-0"
         style={{ backgroundImage: "url('https://images.unsplash.com/photo-1661160055236-d5f87aafe87b?q=80&w=2200&auto=format&fit=crop')" }}>
         
         <div className="absolute inset-0 bg-linear-to-b from-black/40 via-black/50 to-black/70" />
 
-        <div className="relative z-10 text-center px-6 max-w-5xl mx-auto">
-          <div className="inline-flex items-center gap-2 bg-white/90 backdrop-blur-md text-slate-800 px-6 py-2 rounded-full text-sm font-medium mb-8">
+        <div className="relative z-10 text-center w-full max-w-5xl mx-auto px-2 sm:px-6">
+          <div className="inline-flex items-center gap-2 bg-white/90 backdrop-blur-md text-slate-800 px-4 py-2 sm:px-6 rounded-full text-xs sm:text-sm font-medium mb-6 sm:mb-8">
             🌟 Spring 2026 events are live
           </div>
 
-          <h1 className="text-7xl font-bold text-white leading-none mb-6 tracking-tight">
-            Discover Campus Events<br />Easily
+          <h1 className="text-4xl sm:text-6xl lg:text-7xl font-bold text-white leading-tight sm:leading-none mb-4 sm:mb-6 tracking-tight">
+            Discover Campus Events<br className="hidden sm:block" /> <span className="sm:hidden"> </span>Easily
           </h1>
           
-          <p className="text-2xl text-white/90 max-w-3xl mx-auto mb-12">
+          <p className="text-base sm:text-xl lg:text-2xl text-white/90 max-w-3xl mx-auto mb-8 sm:mb-12 leading-relaxed">
             Find, join, and create unforgettable campus events — from hackathons to open mics, all in one place.
           </p>
 
-          <div className="flex flex-col sm:flex-row gap-5 justify-center">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-5 justify-center">
             <Link 
               to="/events" 
-              className="bg-blue-600 hover:bg-blue-700 text-white px-12 py-5 rounded-2xl font-semibold text-lg transition-all"
+              className="bg-blue-600 hover:bg-blue-700 text-white px-7 py-3.5 sm:px-12 sm:py-5 rounded-2xl font-semibold text-base sm:text-lg transition-all"
             >
              Explore Events →
             </Link>
             <Link 
               to="/login" 
-              className="border-2 border-white text-white hover:bg-white/10 px-12 py-5 rounded-2xl font-semibold text-lg transition-all"
+              className="border-2 border-white text-white hover:bg-white/10 px-7 py-3.5 sm:px-12 sm:py-5 rounded-2xl font-semibold text-base sm:text-lg transition-all"
             >
               Host an Event
             </Link>
