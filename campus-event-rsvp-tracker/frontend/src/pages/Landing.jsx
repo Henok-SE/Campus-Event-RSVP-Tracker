@@ -148,7 +148,7 @@ export default function Landing() {
                 <div className="pointer-events-none absolute -top-14 -right-10 h-24 w-24 rounded-full bg-blue-100/70 blur-2xl" />
 
                 <div className="relative flex items-start gap-4 md:flex-col md:items-center md:text-center">
-                  <div className="shrink-0 w-12 h-12 md:w-20 md:h-20 bg-gradient-to-br from-blue-600 to-cyan-500 text-white text-lg md:text-3xl font-bold rounded-2xl md:rounded-3xl flex items-center justify-center">
+                  <div className="shrink-0 w-12 h-12 md:w-20 md:h-20 bg-linear-to-br from-blue-600 to-cyan-500 text-white text-lg md:text-3xl font-bold rounded-2xl md:rounded-3xl flex items-center justify-center">
                     {step.n}
                   </div>
 
