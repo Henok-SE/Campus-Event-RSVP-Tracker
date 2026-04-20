@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import EventCard from '../components/ui/EventCard';
 import { getApiError, getEvents } from '../services/api';
 import { mapApiEvent } from '../utils/eventAdapter';
+import useScrollReveal from '../hooks/useScrollReveal';
 
 const PUBLIC_EVENT_STATUSES = new Set(['Published', 'Ongoing']);
 
@@ -14,6 +15,8 @@ export default function Landing() {
   const [upcoming, setUpcoming] = useState([]);
   const [isLoadingUpcoming, setIsLoadingUpcoming] = useState(true);
   const [upcomingError, setUpcomingError] = useState('');
+
+  useScrollReveal();
 
   // If already signed up → go straight to Dashboard
   useEffect(() => {
@@ -71,19 +74,19 @@ export default function Landing() {
         <div className="absolute inset-0 bg-linear-to-b from-black/40 via-black/50 to-black/70" />
 
         <div className="relative z-10 text-center w-full max-w-5xl mx-auto px-2 sm:px-6">
-          <div className="inline-flex items-center gap-2 bg-white/90 backdrop-blur-md text-slate-800 px-4 py-2 sm:px-6 rounded-full text-xs sm:text-sm font-medium mb-6 sm:mb-8">
+          <div data-scroll-reveal className="scroll-reveal reveal-delay-1 inline-flex items-center gap-2 bg-white/90 backdrop-blur-md text-slate-800 px-4 py-2 sm:px-6 rounded-full text-xs sm:text-sm font-medium mb-6 sm:mb-8">
             🌟 Spring 2026 events are live
           </div>
 
-          <h1 className="text-4xl sm:text-6xl lg:text-7xl font-bold text-white leading-tight sm:leading-none mb-4 sm:mb-6 tracking-tight">
+          <h1 data-scroll-reveal className="scroll-reveal reveal-delay-2 text-4xl sm:text-6xl lg:text-7xl font-bold text-white leading-tight sm:leading-none mb-4 sm:mb-6 tracking-tight">
             Discover Campus Events<br className="hidden sm:block" /> <span className="sm:hidden"> </span>Easily
           </h1>
           
-          <p className="text-base sm:text-xl lg:text-2xl text-white/90 max-w-3xl mx-auto mb-8 sm:mb-12 leading-relaxed">
+          <p data-scroll-reveal className="scroll-reveal reveal-delay-3 text-base sm:text-xl lg:text-2xl text-white/90 max-w-3xl mx-auto mb-8 sm:mb-12 leading-relaxed">
             Find, join, and create unforgettable campus events — from hackathons to open mics, all in one place.
           </p>
 
-          <div className="flex flex-col sm:flex-row gap-3 sm:gap-5 justify-center">
+          <div data-scroll-reveal className="scroll-reveal reveal-delay-4 flex flex-col sm:flex-row gap-3 sm:gap-5 justify-center">
             <Link 
               to="/login?mode=register" 
               className="bg-blue-600 hover:bg-blue-700 text-white px-7 py-3.5 sm:px-12 sm:py-5 rounded-2xl font-semibold text-base sm:text-lg transition-all"
@@ -103,7 +106,7 @@ export default function Landing() {
       {/* WHAT IS CAMPUSVIBE - id="about" */}
       <section id="about" className="py-24 px-6 bg-white">
         <div className="max-w-7xl mx-auto grid md:grid-cols-2 gap-16 items-center">
-          <div>
+          <div data-scroll-reveal className="scroll-reveal">
             <p className="uppercase text-blue-600 font-semibold tracking-widest text-sm mb-3">WHAT IS CAMPUSVIBE?</p>
             <h2 className="text-5xl font-bold leading-tight mb-8">The heartbeat of your campus</h2>
             <p className="text-lg text-slate-600">CampusVibe is a student-powered platform that brings every campus event into one beautiful feed.</p>
@@ -115,7 +118,7 @@ export default function Landing() {
               { icon: "❤️", title: "Community First", desc: "See who’s going, invite your crew, and build real connections." },
               { icon: "🌍", title: "Open to Every Campus", desc: "Whether your school has 500 or 50,000 students, it fits perfectly." }
             ].map((item, i) => (
-              <div key={i} className="flex gap-6 bg-slate-50 p-8 rounded-3xl">
+              <div key={item.title} data-scroll-reveal className={`scroll-reveal reveal-delay-${Math.min(i + 1, 4)} flex gap-6 bg-slate-50 p-8 rounded-3xl`}>
                 <div className="text-5xl">{item.icon}</div>
                 <div>
                   <h3 className="font-semibold text-2xl mb-2">{item.title}</h3>
@@ -130,7 +133,7 @@ export default function Landing() {
       {/* HOW IT WORKS + UPCOMING EVENTS - id="events" */}
       <section id="events" className="bg-slate-50 px-4 py-14 sm:px-6 sm:py-24">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-10 sm:mb-16">
+          <div data-scroll-reveal className="scroll-reveal text-center mb-10 sm:mb-16">
             <p className="uppercase text-blue-600 text-sm font-medium tracking-widest mb-3">SIMPLE &amp; EASY</p>
             <h2 className="text-3xl sm:text-5xl font-bold tracking-tight">How it works</h2>
           </div>
@@ -140,10 +143,11 @@ export default function Landing() {
               { n: "01", t: "Browse", d: "Explore events by category, date, or popularity" },
               { n: "02", t: "RSVP", d: "One tap to save your spot and invite friends" },
               { n: "03", t: "Show Up & Enjoy", d: "Arrive, connect, and make memories" }
-            ].map(step => (
+            ].map((step, index) => (
               <div
                 key={step.n}
-                className="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white px-4 py-4 sm:px-6 sm:py-6 md:rounded-3xl md:px-8 md:py-8 shadow-[0_16px_34px_-26px_rgba(15,23,42,0.55)]"
+                data-scroll-reveal
+                className={`scroll-reveal reveal-delay-${Math.min(index + 1, 4)} group relative overflow-hidden rounded-2xl border border-slate-200 bg-white px-4 py-4 sm:px-6 sm:py-6 md:rounded-3xl md:px-8 md:py-8 shadow-[0_16px_34px_-26px_rgba(15,23,42,0.55)]`}
               >
                 <div className="pointer-events-none absolute -top-14 -right-10 h-24 w-24 rounded-full bg-blue-100/70 blur-2xl" />
 
@@ -162,34 +166,39 @@ export default function Landing() {
           </div>
 
           <div>
-            <div className="flex justify-between items-end mb-10">
+            <div data-scroll-reveal className="scroll-reveal flex justify-between items-end mb-10">
               <h2 className="text-4xl font-bold">Don’t miss out</h2>
               <Link to="/login?redirect=/events" className="text-blue-600 font-medium">View all events →</Link>
             </div>
 
             {upcomingError ? (
-              <div className="mb-6 rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-700">
+              <div data-scroll-reveal className="scroll-reveal mb-6 rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-700">
                 {upcomingError}
               </div>
             ) : null}
 
             {isLoadingUpcoming ? (
-              <div className="rounded-3xl bg-white border border-slate-200 p-12 text-center text-slate-500">
+              <div data-scroll-reveal className="scroll-reveal rounded-3xl bg-white border border-slate-200 p-12 text-center text-slate-500">
                 Loading upcoming events...
               </div>
             ) : upcoming.length === 0 ? (
-              <div className="rounded-3xl bg-white border border-slate-200 p-12 text-center text-slate-500">
+              <div data-scroll-reveal className="scroll-reveal rounded-3xl bg-white border border-slate-200 p-12 text-center text-slate-500">
                 Upcoming events will appear here soon.
               </div>
             ) : (
               <div className="grid md:grid-cols-3 gap-8">
-                {upcoming.map((event) => (
-                  <EventCard
+                {upcoming.map((event, index) => (
+                  <div
                     key={event.id}
-                    event={event}
-                    ctaTo={`/login?redirect=/event/${event.id}`}
-                    ctaLabel="View Details"
-                  />
+                    data-scroll-reveal
+                    className={`scroll-reveal reveal-delay-${(index % 3) + 1}`}
+                  >
+                    <EventCard
+                      event={event}
+                      ctaTo={`/login?redirect=/event/${event.id}`}
+                      ctaLabel="View Details"
+                    />
+                  </div>
                 ))}
               </div>
             )}
@@ -199,7 +208,7 @@ export default function Landing() {
 
       {/* FINAL CTA */}
       <div className="mx-6 mb-10">
-        <div className="relative overflow-hidden rounded-4xl border border-slate-200 bg-white px-6 py-12 sm:px-10 sm:py-14 text-center shadow-[0_20px_60px_-35px_rgba(15,23,42,0.4)]">
+        <div data-scroll-reveal className="scroll-reveal relative overflow-hidden rounded-4xl border border-slate-200 bg-white px-6 py-12 sm:px-10 sm:py-14 text-center shadow-[0_20px_60px_-35px_rgba(15,23,42,0.4)]">
           <div className="absolute -top-16 -right-10 h-44 w-44 rounded-full bg-blue-100/70 blur-2xl" />
           <div className="absolute -bottom-20 -left-10 h-52 w-52 rounded-full bg-slate-100 blur-2xl" />
 
