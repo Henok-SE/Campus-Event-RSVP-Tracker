@@ -11,6 +11,7 @@ node_modules
 dist
 dist-ssr
 *.local
+frontend/build_error.txt
 
 # Environment files (keep templates tracked, keep runtime secrets local)
 backend/.env
